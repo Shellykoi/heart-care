@@ -57,6 +57,7 @@
 - **刷新子路由跳转到 404**：Actions 会自动复制 `index.html` 为 `404.html`，若手动部署，请确保也做此操作。
 - **登录页直接显示**：App 默认在未登录时显示 `LoginPage`，无须额外路由调整。
 - **自定义域名**：在 GitHub Pages 设置里绑定自定义域名后，记得更新 DNS，并按需在仓库根目录添加 `CNAME` 文件。
+- **前端连不上后端**：从 GitHub Pages（HTTPS）访问 HTTP 接口会被浏览器拦截。复制 `docs/env.example` 为 `.env.production`，把 `VITE_API_BASE_URL` 改成你的公网后端地址（必须是 https://，并包含 `/api` 后缀），重新 `npm run build` 后再部署。开发环境可在 `.env.development` 保留 `http://localhost:8000/api`。
 
-部署成功后，将生成的链接分享给用户即可。首次启动建议在隐身窗口测试登录流程，确认 API CORS/HTTPS 等配置都正常工作。*** End Patch
+部署成功后，将生成的链接分享给用户即可。首次启动建议在隐身窗口测试登录流程，确认 API CORS/HTTPS 等配置都正常工作。
 

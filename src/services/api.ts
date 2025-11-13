@@ -6,7 +6,20 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
 // API 基础配置
-const API_BASE_URL = 'http://localhost:8000/api';
+const DEFAULT_API_ORIGIN = 'http://localhost:8000';
+const DEFAULT_API_BASE_URL = `${DEFAULT_API_ORIGIN}/api`;
+const metaEnv =
+  typeof import.meta !== 'undefined'
+    ? ((import.meta as unknown as { env?: Record<string, string | undefined> }).env ??
+      undefined)
+    : undefined;
+const resolvedBaseUrl =
+  (typeof metaEnv?.VITE_API_BASE_URL === 'string' && metaEnv.VITE_API_BASE_URL.trim()) ||
+  DEFAULT_API_BASE_URL;
+const API_BASE_URL = resolvedBaseUrl.replace(/\/+$/, '');
+const API_ORIGIN = API_BASE_URL.endsWith('/api')
+  ? API_BASE_URL.slice(0, -4)
+  : API_BASE_URL;
 
 // 创建 axios 实例
 const api: AxiosInstance = axios.create({
@@ -55,7 +68,7 @@ api.interceptors.response.use(
         if (customError.detail && typeof customError.detail === 'string' && customError.detail.includes('\n')) {
           errorDetail = customError.detail;
         } else {
-          errorDetail = '无法连接到后端服务，请检查：\n1. 后端服务是否已启动（在 src/backend 目录运行 python main.py）\n2. 后端是否运行在 http://localhost:8000\n3. 防火墙是否阻止了连接\n4. 查看浏览器控制台是否有CORS错误';
+          errorDetail = `无法连接到后端服务，请检查：\n1. 后端服务是否已启动（在 src/backend 目录运行 python main.py）\n2. 后端是否运行在 ${API_ORIGIN || DEFAULT_API_ORIGIN}\n3. 防火墙是否阻止了连接\n4. 查看浏览器控制台是否有CORS错误`;
         }
       } else if (error.message) {
         errorMessage = error.message;
