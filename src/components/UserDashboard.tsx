@@ -598,7 +598,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
       role="user"
       children={
         <>
-          <div className="mb-8">
+          <div className="mb-10">
             <div className="flex flex-col gap-1 text-left">
               {currentTabMeta.subtitle && (
                 <span className="text-sm text-[#8C8579]">
@@ -616,68 +616,40 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
             </div>
           </div>
           {activeTab === 'home' && (
-            <div className="space-y-6 pb-6">
-              {/* Quick Stats - 顶部概览区 - 采用设计稿风格 */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="bg-[#1F1B18] border border-[#1F1B18] rounded-[24px] shadow-[0_20px_40px_rgba(18,16,14,0.4)] text-[#F7F3EB]">
-                  <CardContent className="p-8">
-                    <p className="text-sm text-[#D5CFC4] mb-2">待确认预约</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-3xl font-semibold text-[#FDFBF8]">
-                        {loading ? '...' : stats.pending_appointments}
-                      </p>
-                      <div className="bg-[#2B241F] p-3 rounded-xl">
-                        <img src={IconCompanionHealing} alt="待确认预约" className="w-10 h-10 object-contain" />
+            <div className="space-y-8 pb-8">
+              {/* Quick Stats - 顶部概览区 - 更紧凑的布局 */}
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+                {quickStatsCards.map((card) => (
+                  <Card
+                    key={card.key}
+                    className={`${card.wrapperClass} border-none rounded-[20px] shadow-[0_14px_32px_rgba(24,20,17,0.28)] transition-transform duration-200 hover:-translate-y-1 md:min-h-[180px]`}
+                  >
+                    <CardContent className="flex h-full flex-col justify-between gap-4 p-6 md:p-7">
+                      <div className="flex items-center justify-between gap-4 pr-1">
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium uppercase tracking-[0.12em] opacity-75">
+                            {card.title}
+                          </p>
+                          <p className="text-3xl font-semibold leading-tight">
+                            {card.value}
+                          </p>
+                        </div>
+                        <div
+                          className={`${card.iconWrapperClass} flex items-center justify-center rounded-2xl p-3.5 shadow-inner`}
+                        >
+                          <img
+                            src={card.iconSrc}
+                            alt={card.title}
+                            className="h-10 w-10 object-contain md:h-12 md:w-12"
+                          />
+                        </div>
                       </div>
-                    </div>
-                   
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-[#27221D] border border-[#27221D] rounded-[24px] shadow-[0_18px_36px_rgba(20,18,16,0.38)] text-[#F5F0E6]">
-                  <CardContent className="p-8">
-                    <p className="text-sm text-[#D3CCC1] mb-2">已完成咨询</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-3xl font-semibold text-[#FBF7F0]">
-                        {loading ? '...' : stats.completed_appointments}
+                      <p className="text-xs font-medium opacity-70">
+                        {card.hint}
                       </p>
-                      <div className="bg-[#322C26] p-3 rounded-xl">
-                        <img src={IconMusicHealing} alt="已完成咨询" className="w-10 h-10 object-contain" />
-                      </div>
-                    </div>
-                  
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-[#302A25] border border-[#302A25] rounded-[24px] shadow-[0_18px_36px_rgba(26,22,19,0.38)] text-[#F6F1E8]">
-                  <CardContent className="p-8">
-                    <p className="text-sm text-[#E2D9CB] mb-2">测评报告</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-3xl font-semibold text-[#FEFBF5]">
-                        {loading ? '...' : stats.test_reports}
-                      </p>
-                      <div className="bg-[#3A332D] p-3 rounded-xl">
-                        <img src={IconArtHealing} alt="测评报告" className="w-10 h-10 object-contain" />
-                      </div>
-                    </div>
-
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-[#3A332D] border border-[#3A332D] rounded-[24px] shadow-[0_18px_36px_rgba(26,22,19,0.32)] text-[#F9F4EA]">
-                  <CardContent className="p-8">
-                    <p className="text-sm text-[#E7DDCE] mb-2">收藏文章</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-3xl font-semibold text-[#FEFAF4]">
-                        {loading ? '...' : stats.favorites}
-                      </p>
-                      <div className="bg-[#443B34] p-3 rounded-xl">
-                        <img src={IconTeaHealing} alt="收藏文章" className="w-10 h-10 object-contain" />
-                      </div>
-                    </div>
-
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
 
               {/* 咨询统计 - 时间和咨询时间数据看板 - 采用设计稿风格 */}
@@ -807,65 +779,79 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
                       <div className="grid grid-cols-2 gap-4 md:gap-6">
                         {/* 总咨询次数 */}
                         <Card className="bg-white border border-[#F1EFEA] shadow-sm">
-                          <CardContent className="p-6 flex h-full flex-col justify-between">
-                            <div>
-                              <CardDescription className="text-sm text-[#6B6B6B]">总咨询次数</CardDescription>
-                              <p className="text-xs text-[#A19C92] mt-1">{viewModeLabel}</p>
-                              <p className="text-3xl font-semibold text-[#1F1B18] mt-3">{viewData.totalConsultations}</p>
-                              <p className="text-xs text-[#A19C92] mt-2">次咨询</p>
+                          <CardContent className="flex h-full flex-col gap-5 p-5 md:p-6">
+                            <div className="flex items-center justify-between">
+                              <CardDescription className="text-sm font-medium text-[#4A463F]">总咨询次数</CardDescription>
+                              <Badge variant="outline" className="rounded-full px-3 py-1 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
+                                {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
+                              </Badge>
                             </div>
-                            <Badge variant="outline" className="self-start mt-4 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
-                              {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
-                            </Badge>
+                            <div className="flex items-baseline justify-center gap-2 text-[#1F1B18]">
+                              <span className="text-sm text-[#A19C92]">{viewModeLabel}</span>
+                              <span className="text-4xl font-semibold leading-none">
+                                {viewData.totalConsultations}
+                              </span>
+                              <span className="text-sm text-[#A19C92]">次咨询</span>
+                            </div>
                           </CardContent>
                         </Card>
 
                         {/* 总咨询时长 */}
                         <Card className="bg-white border border-[#F1EFEA] shadow-sm">
-                          <CardContent className="p-6 flex h-full flex-col justify-between">
-                            <div>
-                              <CardDescription className="text-sm text-[#6B6B6B]">总咨询时长</CardDescription>
-                              <p className="text-xs text-[#A19C92] mt-1">{viewModeLabel}</p>
-                              <p className="text-3xl font-semibold text-[#1F1B18] mt-3">
-                                {viewMode === 'day' ? `${viewData.totalDuration} 分钟` : `${viewData.totalDuration} 小时`}
-                              </p>
-                              <p className="text-xs text-[#A19C92] mt-2">总时长</p>
+                          <CardContent className="flex h-full flex-col gap-5 p-5 md:p-6">
+                            <div className="flex items-center justify-between">
+                              <CardDescription className="text-sm font-medium text-[#4A463F]">总咨询时长</CardDescription>
+                              <Badge variant="outline" className="rounded-full px-3 py-1 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
+                                {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
+                              </Badge>
                             </div>
-                            <Badge variant="outline" className="self-start mt-4 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
-                              {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
-                            </Badge>
+                            <div className="flex items-baseline justify-center gap-2 text-[#1F1B18]">
+                              <span className="text-sm text-[#A19C92]">{viewModeLabel}</span>
+                              <span className="text-4xl font-semibold leading-none">
+                                {viewData.totalDuration}
+                              </span>
+                              <span className="text-sm text-[#A19C92]">
+                                {viewMode === 'day' ? '分钟' : '小时'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-center text-[#A19C92]">总时长</p>
                           </CardContent>
                         </Card>
 
                         {/* 平均时长 */}
                         <Card className="bg-white border border-[#F1EFEA] shadow-sm">
-                          <CardContent className="p-6 flex h-full flex-col justify-between">
-                            <div>
-                              <CardDescription className="text-sm text-[#6B6B6B]">平均时长</CardDescription>
-                              <p className="text-xs text-[#A19C92] mt-1">{viewModeLabel}</p>
-                              <p className="text-3xl font-semibold text-[#1F1B18] mt-3">
-                                {viewData.avgDuration} 分钟
-                              </p>
-                              <p className="text-xs text-[#A19C92] mt-2">单次平均</p>
+                          <CardContent className="flex h-full flex-col gap-5 p-5 md:p-6">
+                            <div className="flex items-center justify-between">
+                              <CardDescription className="text-sm font-medium text-[#4A463F]">平均时长</CardDescription>
+                              <Badge variant="outline" className="rounded-full px-3 py-1 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
+                                {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
+                              </Badge>
                             </div>
-                            <Badge variant="outline" className="self-start mt-4 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
-                              {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
-                            </Badge>
+                            <div className="flex items-baseline justify-center gap-2 text-[#1F1B18]">
+                              <span className="text-sm text-[#A19C92]">{viewModeLabel}</span>
+                              <span className="text-4xl font-semibold leading-none">
+                                {viewData.avgDuration}
+                              </span>
+                              <span className="text-sm text-[#A19C92]">分钟</span>
+                            </div>
+                            <p className="text-xs text-center text-[#A19C92]">单次平均</p>
                           </CardContent>
                         </Card>
 
                         {/* 趋势概览 */}
                         <Card className="bg-white border border-[#F1EFEA] shadow-sm">
-                          <CardContent className="p-6 flex h-full flex-col justify-between">
-                            <div>
-                              <CardDescription className="text-sm text-[#6B6B6B]">近期趋势</CardDescription>
-                              <p className="text-xs text-[#A19C92] mt-1">{trendRangeLabel}</p>
-                              <p className="text-sm text-[#57534E] leading-relaxed mt-3">
-                                {trendSummaryText}
-                              </p>
+                          <CardContent className="flex h-full flex-col gap-3 p-5 md:p-6">
+                            <div className="flex items-center justify-between">
+                              <CardDescription className="text-sm font-medium text-[#4A463F]">近期趋势</CardDescription>
+                              <Badge variant="outline" className="rounded-full px-3 py-1 text-xs text-[#6B6B6B] border-[#E6E2DC] bg-[#FFFAF3]">
+                                {trendRangeLabel}
+                              </Badge>
                             </div>
-                            <div className="flex items-center justify-end">
-                              <img src={IconSunHealing} alt="趋势" className="w-8 h-8 object-contain" />
+                            <p className="mt-1 text-sm text-[#57534E] leading-relaxed text-center">
+                              {trendSummaryText}
+                            </p>
+                            <div className="mt-2 flex items-center justify-center">
+                              <img src={IconSunHealing} alt="趋势" className="h-8 w-8 object-contain" />
                             </div>
                           </CardContent>
                         </Card>
@@ -908,7 +894,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
                           statusText = '待确认';
                           statusColor = 'bg-blue-100 text-blue-700';
                         } else if (appointment.status === 'confirmed') {
-                          if (appointment.user_confirmed_complete === true && 
+                          if (appointment.user_confirmed_complete === true &&
                               appointment.counselor_confirmed_complete === true) {
                             statusText = '已完成';
                             statusColor = 'bg-green-100 text-green-700';
@@ -927,7 +913,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
                         const formattedDate = `${appointmentDate.getFullYear()}-${String(appointmentDate.getMonth() + 1).padStart(2, '0')}-${String(appointmentDate.getDate()).padStart(2, '0')} ${String(appointmentDate.getHours()).padStart(2, '0')}:${String(appointmentDate.getMinutes()).padStart(2, '0')}`;
 
                         return (
-                          <Card 
+                          <Card
                             key={appointment.id}
                             className="w-80 flex-shrink-0 bg-[var(--card-white)] border border-[var(--border)] rounded-[24px] shadow-[var(--shadow-soft)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-transform duration-300 hover:-translate-y-1 cursor-pointer"
                             onClick={() => openAppointmentDialog(appointment)}

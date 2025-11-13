@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Avatar, AvatarFallback } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from './ui/utils';
 import heartImage from '../assets/images/heart.png';
+import { Button } from './ui/button';
 
 interface SidebarItem {
   id: string;
@@ -33,6 +34,7 @@ export function SidebarLayout({
 }: SidebarLayoutProps) {
   const [expanded, setExpanded] = useState(true); // 默认展开
   const [isMobile, setIsMobile] = useState(false);
+  const avatarUrl = userInfo?.avatar_url || userInfo?.avatar || userInfo?.avatarUrl || '';
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -173,18 +175,30 @@ export function SidebarLayout({
         </nav>
 
         {/* 底部用户信息 */}
-        <div className="flex flex-col items-center mb-8">
-          <Avatar className="h-10 w-10 border border-[#e8e2db]">
+        <div className="mb-8 flex w-full flex-col items-center gap-3 px-6">
+          <Avatar className="h-12 w-12 border border-[#e8e2db]">
+            {avatarUrl && (
+              <AvatarImage src={avatarUrl} alt={userInfo?.nickname || userInfo?.username || '用户头像'} />
+            )}
             <AvatarFallback className="bg-white text-[#222]">
               {userInfo?.nickname?.[0] || userInfo?.username?.[0] || 'U'}
             </AvatarFallback>
           </Avatar>
           {expanded && (
             <>
-              <div className="mt-2 text-sm font-medium text-[#222]">{userInfo?.nickname || userInfo?.username || '用户'}</div>
+              <div className="text-sm font-medium text-[#222]">{userInfo?.nickname || userInfo?.username || '用户'}</div>
               <div className="text-xs text-[#999]">ID: {userInfo?.id || '—'}</div>
             </>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onLogout}
+          >
+            {expanded ? '退出登录' : '退出'}
+          </Button>
         </div>
       </aside>
 

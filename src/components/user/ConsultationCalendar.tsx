@@ -210,7 +210,7 @@ const classifyDayStatus = (dayAppointments: AppointmentRecord[]) => {
 export function ConsultationCalendar({
   appointments = [],
   loading = false,
-  title = 'Your Training Days',
+  title = '我的咨询日程',
 }: ConsultationCalendarProps) {
   const today = useMemo(() => new Date(), []);
   const calendarYear = today.getFullYear();

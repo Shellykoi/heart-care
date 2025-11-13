@@ -34,12 +34,14 @@ class UserUpdate(BaseModel):
     gender: Optional[Gender] = None
     age: Optional[int] = None
     school: Optional[str] = None
+    avatar: Optional[str] = None
 
 
 class UserResponse(UserBase):
     """用户响应"""
     id: int
     nickname: Optional[str]
+    avatar: Optional[str] = None
     gender: Gender
     gender_display: Optional[str] = None  # 性别中文显示
     role: UserRole

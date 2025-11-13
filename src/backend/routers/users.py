@@ -2,7 +2,7 @@
 用户路由 - 用户信息管理
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -35,11 +35,34 @@ def update_user_profile(
         current_user.age = user_data.age
     if user_data.school:
         current_user.school = user_data.school
+    if user_data.avatar:
+        current_user.avatar = user_data.avatar
     
     db.commit()
     db.refresh(current_user)
     
     return current_user
+
+
+@router.post("/avatar/upload")
+def upload_user_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """上传用户头像"""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="只能上传图片文件")
+    
+    file_content = file.file.read()
+    if len(file_content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="文件大小不能超过5MB")
+    
+    avatar_url = f"/uploads/avatars/user_{current_user.id}_{file.filename}"
+    current_user.avatar = avatar_url
+    db.commit()
+    
+    return {"avatar_url": avatar_url, "message": "头像上传成功"}
 
 
 @router.delete("/profile")

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Users, UserCheck, FileText, BarChart3, Shield, CheckCircle, XCircle, Plus, Trash2 } from 'lucide-react';
+import { Users, UserCheck, FileText, BarChart3, Shield, CheckCircle, XCircle, Plus, Trash2, Eye, Star } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Input } from './ui/input';
 import { Label } from './ui/label';

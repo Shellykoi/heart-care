@@ -22,15 +22,46 @@
 
 ## 数据库配置
 
-数据库连接信息已在 `src/backend/database.py` 中配置：
+后端通过环境变量 `DATABASE_URL` 控制数据库连接地址，代码中不再硬编码任何凭证。
 
-```python
-DATABASE_URL = "mysql+pymysql://shellykoi:123456koiii@localhost:3306/nanhu_psychology"
-```
+### 本地开发（MySQL）
 
-**账号**: shellykoi  
-**密码**: 123456koiii  
-**数据库**: nanhu_psychology
+1. 复制 `env/local.env.template` 为 `.env`（或在 IDE 中配置环境变量），并填写自己的 MySQL 信息：
+
+   ```
+   DATABASE_URL=mysql+pymysql://root:your_local_password@localhost:3306/your_database
+   SQLALCHEMY_ECHO=true
+   ```
+
+2. 确保安装了 MySQL 驱动：
+
+   ```bash
+   pip install pymysql
+   ```
+
+3. 本地启动 FastAPI 时，`src/backend/database.py` 会读取 `.env` 中的配置并连接本地 MySQL。日志中会输出：
+
+   ```
+   Connecting to database: ***@localhost:3306/your_database
+   ```
+
+### Render 部署（Neon PostgreSQL）
+
+1. 在 Render 控制台的 **Environment → Environment Variables** 中添加：
+
+   | Key           | Value                                                                 |
+   | ------------- | --------------------------------------------------------------------- |
+   | `DATABASE_URL` | `postgresql://<user>:<password>@<host>.neon.tech/neondb?sslmode=require` |
+
+   可以直接使用 Neon 仪表盘生成的连接串（移除尾部多余的 `&`）。
+
+2. 部署到 Render 时，后端会自动读取该变量并连接 Neon PostgreSQL；日志中会输出：
+
+   ```
+   Connecting to database: ***@ep-xxxx.neon.tech/neondb
+   ```
+
+> 注意：本地 `.env` 中的配置不会上传到 Render，云端与本地数据库互不干扰。
 
 ## 环境要求
 
@@ -77,12 +108,7 @@ pip install -r requirements.txt
 
 确保 MySQL 服务已启动，并且数据库用户 `shellykoi` 存在且有权限。
 
-数据库连接信息在 `src/backend/database.py` 中：
-```python
-DATABASE_URL = "mysql+pymysql://shellykoi:123456koiii@localhost:3306/nanhu_psychology"
-```
-
-如需修改，请编辑该文件。
+数据库连接信息通过 `.env` 或部署平台环境变量控制，无需修改 `src/backend/database.py`。
 
 ### 步骤 3: 初始化数据库
 

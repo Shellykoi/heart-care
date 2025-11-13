@@ -129,6 +129,15 @@ export const userApi = {
   // 获取用户资料
   getProfile: () => api.get('/users/profile'),
 
+  // 上传用户头像
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/users/avatar/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
   // 更新用户资料
   updateProfile: (data: {
     nickname?: string;
@@ -212,6 +221,9 @@ export const counselorApi = {
 
   // 获取咨询师统计数据
   getStats: () => api.get('/counselors/stats/mine'),
+
+  // 获取咨询活动统计数据
+  getConsultationActivity: () => api.get('/counselors/stats/consultation-activity'),
 
   // 批量设置咨询师时段
   setSchedules: (schedules: Array<{

@@ -49,6 +49,35 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleUserInfoUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<any>).detail;
+      if (detail) {
+        setUserInfo((prev: any) => ({ ...(prev || {}), ...detail }));
+        if (detail.role) {
+          setUserRole(normalizeRole(detail.role));
+        }
+        return;
+      }
+
+      try {
+        const stored = localStorage.getItem('user_info');
+        if (stored) {
+          const user = JSON.parse(stored);
+          setUserInfo((prev: any) => ({ ...(prev || {}), ...user }));
+          setUserRole(normalizeRole(user.role));
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    };
+
+    window.addEventListener('user-info:updated', handleUserInfoUpdated as EventListener);
+    return () => {
+      window.removeEventListener('user-info:updated', handleUserInfoUpdated as EventListener);
+    };
+  }, []);
+
   const handleLogin = (role: UserRole, userInfo: any) => {
     setIsLoggedIn(true);
     setUserRole(role);

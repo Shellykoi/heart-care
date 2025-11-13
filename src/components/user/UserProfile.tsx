@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { User, Lock, Shield, Bell, Trash2, Download } from 'lucide-react';
 import { userApi } from '../../services/api';
@@ -15,12 +15,15 @@ export function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [formData, setFormData] = useState({
     nickname: '',
     gender: 'prefer-not',
     age: '',
     school: '',
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 加载用户资料
   useEffect(() => {
@@ -33,6 +36,7 @@ export function UserProfile() {
       const response: any = await userApi.getProfile();
       const data = response?.data || response;
       setUserProfile(data);
+      setAvatarPreview(data?.avatar_url || data?.avatar || '');
       
       // 将后端的gender值映射到前端的值
       // 后端: male, female, other -> 前端: male, female, prefer-not
@@ -57,6 +61,59 @@ export function UserProfile() {
       toast.error(error?.detail || error?.message || '加载用户资料失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('头像文件不能超过5MB');
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const response: any = await userApi.uploadAvatar(file);
+      const avatarUrl =
+        response?.avatar_url ||
+        response?.data?.avatar_url ||
+        response?.url ||
+        response?.data?.url ||
+        '';
+
+      if (avatarUrl) {
+        setAvatarPreview(avatarUrl);
+        setUserProfile((prev: any) => ({
+          ...prev,
+          avatar_url: avatarUrl,
+          avatar: avatarUrl,
+        }));
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = localStorage.getItem('user_info');
+            const merged = stored
+              ? { ...JSON.parse(stored), avatar_url: avatarUrl, avatar: avatarUrl }
+              : { avatar_url: avatarUrl, avatar: avatarUrl };
+            localStorage.setItem('user_info', JSON.stringify(merged));
+            window.dispatchEvent(new CustomEvent('user-info:updated', { detail: merged }));
+          } catch (storageError) {
+            console.warn('更新本地用户信息失败:', storageError);
+          }
+        }
+      }
+
+      toast.success('头像更新成功');
+    } catch (error: any) {
+      console.error('上传头像失败:', error);
+      toast.error(error?.detail || error?.message || '上传头像失败');
+    } finally {
+      setAvatarUploading(false);
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -109,6 +166,8 @@ export function UserProfile() {
     }
   };
 
+  const currentAvatar = avatarPreview || userProfile?.avatar_url || userProfile?.avatar || '';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -160,11 +219,28 @@ export function UserProfile() {
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6">
                 <Avatar className="h-20 w-20">
+                  {currentAvatar && <AvatarImage src={currentAvatar} alt="用户头像" />}
                   <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                     {getAvatarInitial()}
                   </AvatarFallback>
                 </Avatar>
-                <Button variant="outline">更换头像</Button>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={avatarUploading}
+                  >
+                    {avatarUploading ? '上传中...' : '更换头像'}
+                  </Button>
+                  <p className="text-xs text-gray-500">支持 JPG/PNG，大小不超过 5MB</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

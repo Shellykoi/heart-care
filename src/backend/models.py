@@ -66,6 +66,7 @@ class User(Base):
     
     # 基本信息
     nickname = Column(String(50), nullable=True)
+    avatar = Column(String(500), nullable=True)  # 头像URL（存储在对象存储或静态目录）
     gender = Column(Enum(Gender), default=Gender.OTHER)
     age = Column(Integer, nullable=True)
     school = Column(String(100), nullable=True)  # 学校/单位

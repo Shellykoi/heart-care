@@ -5,7 +5,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from jose import jwt as jwt_lib, JWTError
 
 from database import get_db
@@ -16,7 +16,8 @@ from schemas import (
     CounselorFavoriteResponse, ClientInfo
 )
 from auth import get_current_active_user, oauth2_scheme
-from sqlalchemy import func, distinct
+from sqlalchemy import func, distinct, and_, or_
+from collections import defaultdict
 from sqlalchemy.orm import joinedload
 import json
 import logging
@@ -583,6 +584,296 @@ def get_counselor_stats(
         "average_rating": counselor.average_rating,
         "review_count": counselor.review_count
     }
+
+
+@router.get("/stats/consultation-activity")
+def get_counselor_consultation_activity(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """获取咨询师的咨询活动数据（用于数据可视化）"""
+    from models import CounselorRating
+
+    counselor = db.query(Counselor).filter(Counselor.user_id == current_user.id).first()
+
+    if not counselor:
+        raise HTTPException(status_code=404, detail="您还不是咨询师")
+
+    try:
+        completed_appointments = db.query(Appointment).filter(
+            Appointment.counselor_id == counselor.id,
+            or_(
+                Appointment.status == AppointmentStatus.COMPLETED,
+                and_(
+                    Appointment.status == AppointmentStatus.CONFIRMED,
+                    Appointment.user_confirmed_complete.is_(True),
+                    Appointment.counselor_confirmed_complete.is_(True),
+                ),
+            )
+        ).order_by(Appointment.appointment_date.desc()).all()
+
+        today = date.today()
+        date_stats = defaultdict(int)
+        date_duration_stats = defaultdict(int)
+        consultation_activities = []
+        DEFAULT_DURATION_MINUTES = 60
+        total_duration_minutes = 0
+
+        for appointment in completed_appointments:
+            if appointment.appointment_date is None:
+                continue
+
+            try:
+                apt_datetime = appointment.appointment_date
+                if isinstance(apt_datetime, datetime) and apt_datetime.tzinfo is not None:
+                    apt_datetime = apt_datetime.astimezone().replace(tzinfo=None)
+                elif not isinstance(apt_datetime, datetime):
+                    apt_datetime = datetime.fromisoformat(str(apt_datetime).replace('Z', '+00:00'))
+                    if apt_datetime.tzinfo is not None:
+                        apt_datetime = apt_datetime.astimezone().replace(tzinfo=None)
+            except Exception:
+                apt_datetime = None
+
+            if apt_datetime is None:
+                continue
+
+            appointment_date = apt_datetime.date()
+            days_ago = (today - appointment_date).days
+
+            if days_ago > 30:
+                continue
+
+            date_str = appointment_date.isoformat()
+            date_stats[date_str] += 1
+
+            duration_minutes = DEFAULT_DURATION_MINUTES
+            end_datetime = None
+
+            if appointment.description and "|END_TIME:" in appointment.description:
+                try:
+                    end_time_str = appointment.description.split("|END_TIME:")[1].split("|")[0]
+                    end_datetime = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+                    if end_datetime.tzinfo is not None:
+                        end_datetime = end_datetime.astimezone().replace(tzinfo=None)
+                except Exception:
+                    end_datetime = None
+
+            if end_datetime is None and appointment.updated_at:
+                try:
+                    updated_at = appointment.updated_at
+                    if isinstance(updated_at, datetime) and updated_at.tzinfo is not None:
+                        updated_at = updated_at.astimezone().replace(tzinfo=None)
+                    elif not isinstance(updated_at, datetime):
+                        updated_at = datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))
+                        if updated_at.tzinfo is not None:
+                            updated_at = updated_at.astimezone().replace(tzinfo=None)
+
+                    if isinstance(updated_at, datetime) and isinstance(apt_datetime, datetime):
+                        duration = updated_at - apt_datetime
+                        duration_minutes = max(60, min(180, int(duration.total_seconds() / 60)))
+                except Exception:
+                    duration_minutes = DEFAULT_DURATION_MINUTES
+
+            if end_datetime and isinstance(end_datetime, datetime) and isinstance(apt_datetime, datetime):
+                duration = end_datetime - apt_datetime
+                duration_minutes = max(60, min(180, int(duration.total_seconds() / 60)))
+
+            date_duration_stats[date_str] += duration_minutes
+            total_duration_minutes += duration_minutes
+
+            try:
+                consultation_activities.append({
+                    "id": appointment.id,
+                    "date": date_str,
+                    "datetime": appointment.appointment_date.isoformat()
+                    if hasattr(appointment.appointment_date, "isoformat")
+                    else str(appointment.appointment_date),
+                    "consult_type": appointment.consult_type or "心理咨询",
+                    "consult_method": appointment.consult_method or "未知",
+                    "user_name": appointment.user.nickname if appointment.user else None,
+                    "user_username": appointment.user.username if appointment.user else None,
+                    "duration_minutes": duration_minutes,
+                    "rating": appointment.rating,
+                    "status": "completed",
+                })
+            except Exception:
+                continue
+
+        date_list = []
+        for i in range(29, -1, -1):
+            d = today - timedelta(days=i)
+            date_str = d.isoformat()
+            date_list.append({
+                "date": date_str,
+                "count": date_stats.get(date_str, 0),
+                "total_duration": date_duration_stats.get(date_str, 0),
+            })
+
+        week_stats = defaultdict(int)
+        for appointment in completed_appointments:
+            if appointment.appointment_date is None:
+                continue
+            try:
+                apt_datetime = appointment.appointment_date
+                if isinstance(apt_datetime, datetime) and apt_datetime.tzinfo is not None:
+                    apt_datetime = apt_datetime.astimezone().replace(tzinfo=None)
+                elif not isinstance(apt_datetime, datetime):
+                    apt_datetime = datetime.fromisoformat(str(apt_datetime).replace('Z', '+00:00'))
+                    if apt_datetime.tzinfo is not None:
+                        apt_datetime = apt_datetime.astimezone().replace(tzinfo=None)
+            except Exception:
+                continue
+
+            appointment_date = apt_datetime.date()
+            days_ago = (today - appointment_date).days
+            if days_ago <= 30:
+                week_num = days_ago // 7
+                week_stats[week_num] += 1
+
+        type_stats = defaultdict(int)
+        for appointment in completed_appointments:
+            type_stats[appointment.consult_type or "心理咨询"] += 1
+
+        hour_stats = defaultdict(int)
+        hour_duration_stats = defaultdict(int)
+        time_period_stats = {
+            "morning": 0,
+            "afternoon": 0,
+            "evening": 0,
+            "night": 0,
+        }
+        time_period_duration = {
+            "morning": 0,
+            "afternoon": 0,
+            "evening": 0,
+            "night": 0,
+        }
+        duration_distribution = {
+            "short": 0,
+            "medium": 0,
+            "long": 0,
+            "very_long": 0,
+        }
+
+        for appointment in completed_appointments:
+            if appointment.appointment_date is None:
+                continue
+
+            try:
+                apt_datetime = appointment.appointment_date
+                if isinstance(apt_datetime, datetime) and apt_datetime.tzinfo is not None:
+                    apt_datetime = apt_datetime.astimezone().replace(tzinfo=None)
+                elif not isinstance(apt_datetime, datetime):
+                    apt_datetime = datetime.fromisoformat(str(apt_datetime).replace('Z', '+00:00'))
+                    if apt_datetime.tzinfo is not None:
+                        apt_datetime = apt_datetime.astimezone().replace(tzinfo=None)
+            except Exception:
+                continue
+
+            if not isinstance(apt_datetime, datetime):
+                continue
+
+            hour = apt_datetime.hour
+            hour_stats[hour] += 1
+
+            duration_minutes = DEFAULT_DURATION_MINUTES
+            end_datetime = None
+
+            if appointment.description and "|END_TIME:" in appointment.description:
+                try:
+                    end_time_str = appointment.description.split("|END_TIME:")[1].split("|")[0]
+                    end_datetime = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+                    if end_datetime.tzinfo is not None:
+                        end_datetime = end_datetime.astimezone().replace(tzinfo=None)
+                except Exception:
+                    end_datetime = None
+
+            if end_datetime is None and appointment.updated_at:
+                try:
+                    updated_at = appointment.updated_at
+                    if isinstance(updated_at, datetime) and updated_at.tzinfo is not None:
+                        updated_at = updated_at.astimezone().replace(tzinfo=None)
+                    elif not isinstance(updated_at, datetime):
+                        updated_at = datetime.fromisoformat(str(updated_at).replace('Z', '+00:00'))
+                        if updated_at.tzinfo is not None:
+                            updated_at = updated_at.astimezone().replace(tzinfo=None)
+
+                    if isinstance(updated_at, datetime):
+                        duration = updated_at - apt_datetime
+                        duration_minutes = max(60, min(180, int(duration.total_seconds() / 60)))
+                except Exception:
+                    duration_minutes = DEFAULT_DURATION_MINUTES
+
+            if end_datetime and isinstance(end_datetime, datetime):
+                duration = end_datetime - apt_datetime
+                duration_minutes = max(60, min(180, int(duration.total_seconds() / 60)))
+
+            hour_duration_stats[hour] += duration_minutes
+
+            if 6 <= hour < 12:
+                time_period_stats["morning"] += 1
+                time_period_duration["morning"] += duration_minutes
+            elif 12 <= hour < 18:
+                time_period_stats["afternoon"] += 1
+                time_period_duration["afternoon"] += duration_minutes
+            elif 18 <= hour < 22:
+                time_period_stats["evening"] += 1
+                time_period_duration["evening"] += duration_minutes
+            else:
+                time_period_stats["night"] += 1
+                time_period_duration["night"] += duration_minutes
+
+            if duration_minutes < 60:
+                duration_distribution["short"] += 1
+            elif duration_minutes < 120:
+                duration_distribution["medium"] += 1
+            elif duration_minutes < 180:
+                duration_distribution["long"] += 1
+            else:
+                duration_distribution["very_long"] += 1
+
+        hour_list = []
+        for hour in range(24):
+            count = hour_stats.get(hour, 0)
+            total_dur = hour_duration_stats.get(hour, 0)
+            avg_dur = int(total_dur / count) if count > 0 else 0
+            hour_list.append({
+                "hour": hour,
+                "count": count,
+                "total_duration": total_dur,
+                "average_duration": avg_dur,
+            })
+
+        total_consultations = len(completed_appointments)
+        average_duration_minutes = int(total_duration_minutes / total_consultations) if total_consultations > 0 else 0
+        total_hours = round(total_duration_minutes / 60, 1)
+        recent_7_days = sum(date_stats.get((today - timedelta(days=i)).isoformat(), 0) for i in range(7))
+        recent_30_days = sum(date_stats.values())
+
+        ratings = db.query(CounselorRating).filter(CounselorRating.counselor_id == counselor.id).all()
+        average_rating = round(sum(r.rating for r in ratings) / len(ratings), 1) if ratings else 0
+
+        return {
+            "total_consultations": total_consultations,
+            "total_duration_minutes": total_duration_minutes,
+            "total_duration_hours": total_hours,
+            "average_duration_minutes": average_duration_minutes,
+            "recent_7_days": recent_7_days,
+            "recent_30_days": recent_30_days,
+            "average_rating": average_rating,
+            "daily_stats": date_list,
+            "week_stats": dict(week_stats),
+            "type_stats": dict(type_stats),
+            "hour_stats": hour_list,
+            "time_period_stats": time_period_stats,
+            "time_period_duration": time_period_duration,
+            "duration_distribution": duration_distribution,
+            "activities": consultation_activities[:50],
+        }
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"获取咨询活动数据失败: {exc}")
 
 
 @router.post("/schedules")
