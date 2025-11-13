@@ -60,7 +60,13 @@ app.add_middleware(
         "http://127.0.0.1:3011",
         "http://127.0.0.1:3012",
         "http://127.0.0.1:5173",
+        "https://shellykoi.github.io",
+        "https://shellykoi.github.io/heart-care",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
     ],
+
+
     allow_credentials=True,
     allow_methods=["*"],  # 允许所有HTTP方法
     allow_headers=["*"],  # 允许所有请求头
