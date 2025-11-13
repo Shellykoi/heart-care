@@ -29,11 +29,15 @@
    - 上传产物并部署到 GitHub Pages
 
 ## 3. 首次部署步骤
+# Workflow 监听分支
+- 默认监听 `main` 和 `master`。如果仓库使用其它默认分支，请同步修改 `.github/workflows/deploy.yml`。
+
+## 3. 首次部署步骤
 1. 将代码推送到 GitHub：  
    ```bash
    git add .
    git commit -m "chore: prepare GitHub Pages deployment"
-   git push origin main
+   git push origin <default-branch>
    ```
 2. 进入仓库 → Actions → 找到 “Deploy Vite App to GitHub Pages” 工作流，等待执行完成。
 3. 完成后在仓库设置 → Pages 可以查看最终 URL（通常是 `https://<你的用户名>.github.io/heart-care/`）。
