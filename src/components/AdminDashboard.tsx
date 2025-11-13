@@ -263,15 +263,8 @@ export function AdminDashboard({ onLogout, userInfo }: AdminDashboardProps) {
         return;
       }
       
-      // 生成密码：123456 + 姓名首字母小写
-      const nameInitials = newCounselorForm.real_name
-        .split('')
-        .map(char => {
-          const pinyin = getPinyin(char);
-          return pinyin ? pinyin[0].toLowerCase() : '';
-        })
-        .join('');
-      const password = `123456${nameInitials}`;
+      // 统一生成固定初始密码，避免中文姓名导致的拼音转换失败
+      const password = '123456';
       
       const response = await adminApi.createCounselorAccount({
         ...newCounselorForm,
@@ -384,17 +377,6 @@ export function AdminDashboard({ onLogout, userInfo }: AdminDashboardProps) {
     } catch (error: any) {
       toast.error(error?.detail || error?.message || '删除失败');
     }
-  };
-
-  // 简单的拼音转换函数（简化版）
-  const getPinyin = (char: string): string => {
-    const pinyinMap: Record<string, string> = {
-      '张': 'zhang', '心': 'xin', '怡': 'yi',
-      '李': 'li', '明': 'ming', '阳': 'yang',
-      '王': 'wang', '静': 'jing',
-      // 可以添加更多常用汉字
-    };
-    return pinyinMap[char] || char;
   };
 
   const sidebarItems = [
@@ -917,7 +899,7 @@ export function AdminDashboard({ onLogout, userInfo }: AdminDashboardProps) {
                       </div>
                       <div className="p-3 bg-blue-50 rounded-lg">
                         <p className="text-sm text-blue-600">
-                          密码将自动生成：123456 + 姓名首字母小写（如：张心怡 → 123456zxy）
+                      密码将自动生成：123456（首次登录后请尽快修改）
                         </p>
                       </div>
                       <Button className="w-full" onClick={handleCreateCounselor}>

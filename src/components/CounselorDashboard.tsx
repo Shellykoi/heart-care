@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -156,28 +156,212 @@ function ClientsTab() {
 }
 
 // 咨询记录标签页组件
+type ConsultationRecordSource = 'consultation_record' | 'appointment';
+
+type ConsultationRecordItem = {
+  key: string;
+  record_id?: number | null;
+  appointment_id?: number | null;
+  user_id?: number | null;
+  counselor_id?: number | null;
+  user_name?: string | null;
+  user_nickname?: string | null;
+  user_username?: string | null;
+  user_student_id?: string | null;
+  user_phone?: string | null;
+  user_email?: string | null;
+  counselor_name?: string | null;
+  consult_type?: string | null;
+  consult_method?: string | null;
+  appointment_date?: string | Date | null;
+  description?: string | null;
+  summary?: string | null;
+  rating?: number | null;
+  review?: string | null;
+  user_confirmed_at?: string | Date | null;
+  counselor_confirmed_at?: string | Date | null;
+  user_confirmed_complete?: boolean;
+  counselor_confirmed_complete?: boolean;
+  created_at?: string | Date | null;
+  updated_at?: string | Date | null;
+  source: ConsultationRecordSource;
+  has_official_record: boolean;
+  raw_record?: any;
+  raw_appointment?: any;
+};
+
+const isCompletedAppointment = (appointment: any): boolean => {
+  if (!appointment) {
+    return false;
+  }
+  const status = typeof appointment.status === 'string'
+    ? appointment.status.toLowerCase()
+    : appointment.status;
+  if (status === 'completed') {
+    return true;
+  }
+  if (status === 'confirmed') {
+    return Boolean(appointment.user_confirmed_complete && appointment.counselor_confirmed_complete);
+  }
+  return false;
+};
+
+const coerceArrayResponse = (data: any): any[] => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (Array.isArray(data?.records)) {
+    return data.records;
+  }
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+  return [];
+};
+
+const normalizeConsultationRecord = (record: any): ConsultationRecordItem => {
+  const appointmentId = record?.appointment_id ?? record?.appointmentId ?? null;
+  return {
+    key: `record-${record?.id ?? appointmentId ?? Math.random().toString(36).slice(2)}`,
+    record_id: record?.id ?? null,
+    appointment_id: appointmentId,
+    user_id: record?.user_id ?? null,
+    counselor_id: record?.counselor_id ?? null,
+    user_name: record?.user_name ?? record?.user?.nickname ?? record?.user?.username ?? null,
+    user_nickname: record?.user_nickname ?? record?.user?.nickname ?? null,
+    user_username: record?.user_username ?? record?.user?.username ?? null,
+    user_student_id: record?.user_student_id ?? record?.user?.student_id ?? null,
+    user_phone: record?.user_phone ?? record?.user?.phone ?? null,
+    user_email: record?.user_email ?? record?.user?.email ?? null,
+    counselor_name: record?.counselor_name ?? record?.counselor?.real_name ?? null,
+    consult_type: record?.consult_type ?? null,
+    consult_method: record?.consult_method ?? null,
+    appointment_date: record?.appointment_date ?? null,
+    description: record?.description ?? null,
+    summary: record?.summary ?? null,
+    rating: record?.rating ?? null,
+    review: record?.review ?? null,
+    user_confirmed_at: record?.user_confirmed_at ?? null,
+    counselor_confirmed_at: record?.counselor_confirmed_at ?? null,
+    user_confirmed_complete: record?.user_confirmed_complete ?? true,
+    counselor_confirmed_complete: record?.counselor_confirmed_complete ?? true,
+    created_at: record?.created_at ?? null,
+    updated_at: record?.updated_at ?? null,
+    source: 'consultation_record',
+    has_official_record: true,
+    raw_record: record,
+  };
+};
+
+const normalizeAppointmentRecord = (appointment: any): ConsultationRecordItem => {
+  const appointmentId = appointment?.id ?? null;
+  return {
+    key: `appointment-${appointmentId ?? Math.random().toString(36).slice(2)}`,
+    record_id: null,
+    appointment_id: appointmentId,
+    user_id: appointment?.user_id ?? null,
+    counselor_id: appointment?.counselor_id ?? null,
+    user_name: appointment?.user_name ?? null,
+    user_nickname: appointment?.user_nickname ?? null,
+    user_username: null,
+    user_student_id: null,
+    user_phone: null,
+    user_email: null,
+    counselor_name: appointment?.counselor_name ?? null,
+    consult_type: appointment?.consult_type ?? null,
+    consult_method: appointment?.consult_method ?? null,
+    appointment_date: appointment?.appointment_date ?? null,
+    description: appointment?.description ?? null,
+    summary: appointment?.summary ?? null,
+    rating: appointment?.rating ?? null,
+    review: appointment?.review ?? null,
+    user_confirmed_at: appointment?.updated_at ?? appointment?.appointment_date ?? null,
+    counselor_confirmed_at: appointment?.updated_at ?? appointment?.appointment_date ?? null,
+    user_confirmed_complete: Boolean(appointment?.user_confirmed_complete),
+    counselor_confirmed_complete: Boolean(appointment?.counselor_confirmed_complete),
+    created_at: appointment?.created_at ?? null,
+    updated_at: appointment?.updated_at ?? null,
+    source: 'appointment',
+    has_official_record: false,
+    raw_appointment: appointment,
+  };
+};
+
 function ConsultationRecordsTab() {
-  const [consultationRecords, setConsultationRecords] = useState<any[]>([]);
+  const [consultationRecords, setConsultationRecords] = useState<ConsultationRecordItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [selectedRecord, setSelectedRecord] = useState<ConsultationRecordItem | null>(null);
   const [showRecordDialog, setShowRecordDialog] = useState(false);
 
-  useEffect(() => {
-    loadConsultationRecords();
-  }, []);
-
-  const loadConsultationRecords = async () => {
+  const loadConsultationRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const data: any = await appointmentApi.getConsultationRecords({ limit: 1000 });
-      const records = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.records)
-          ? (data as any).records
-          : Array.isArray((data as any)?.data)
-            ? (data as any).data
-            : [];
-      setConsultationRecords(records);
+      const [recordsResponse, appointmentsResponse] = await Promise.all([
+        appointmentApi.getConsultationRecords({ limit: 1000 }).catch((error: any) => {
+          console.error('加载咨询记录失败:', error);
+          toast.error(getErrorMessage(error, '加载咨询记录失败'));
+          return [];
+        }),
+        appointmentApi.getMyAppointments().catch((error: any) => {
+          console.error('加载预约列表失败:', error);
+          toast.error(getErrorMessage(error, '加载预约列表失败'));
+          return [];
+        }),
+      ]);
+
+      const officialRecords = coerceArrayResponse(recordsResponse).map(normalizeConsultationRecord);
+      const appointments = coerceArrayResponse(appointmentsResponse);
+      const completedAppointments = appointments.filter(isCompletedAppointment).map(normalizeAppointmentRecord);
+
+      const recordMap = new Map<number | string, ConsultationRecordItem>();
+
+      officialRecords.forEach((record) => {
+        const key = record.appointment_id ?? record.key;
+        recordMap.set(key, record);
+      });
+
+      completedAppointments.forEach((appointmentRecord) => {
+        const key = appointmentRecord.appointment_id ?? appointmentRecord.key;
+        if (recordMap.has(key)) {
+          const existing = recordMap.get(key);
+          if (existing) {
+            recordMap.set(key, {
+              ...existing,
+              summary: existing.summary ?? appointmentRecord.summary,
+              rating: existing.rating ?? appointmentRecord.rating,
+              review: existing.review ?? appointmentRecord.review,
+              user_confirmed_complete: appointmentRecord.user_confirmed_complete ?? existing.user_confirmed_complete,
+              counselor_confirmed_complete: appointmentRecord.counselor_confirmed_complete ?? existing.counselor_confirmed_complete,
+              updated_at: existing.updated_at ?? appointmentRecord.updated_at,
+              raw_appointment: appointmentRecord.raw_appointment ?? existing.raw_appointment,
+            });
+          }
+        } else {
+          recordMap.set(key, appointmentRecord);
+        }
+      });
+
+      const mergedRecords = Array.from(recordMap.values()).sort((a, b) => {
+        const timeA = a.appointment_date
+          ? new Date(a.appointment_date).getTime()
+          : (a.created_at ? new Date(a.created_at).getTime() : 0);
+        const timeB = b.appointment_date
+          ? new Date(b.appointment_date).getTime()
+          : (b.created_at ? new Date(b.created_at).getTime() : 0);
+        return timeB - timeA;
+      });
+
+      setConsultationRecords(mergedRecords);
+
+      if (selectedRecord) {
+        const refreshed = mergedRecords.find((item) => item.key === selectedRecord.key);
+        if (refreshed) {
+          setSelectedRecord(refreshed);
+        } else {
+          setShowRecordDialog(false);
+          setSelectedRecord(null);
+        }
+      }
     } catch (error: any) {
       console.error('加载咨询记录失败:', error);
       toast.error(getErrorMessage(error, '加载咨询记录失败'));
@@ -185,14 +369,31 @@ function ConsultationRecordsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedRecord]);
+
+  useEffect(() => {
+    loadConsultationRecords();
+  }, [loadConsultationRecords]);
 
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>咨询记录看板</CardTitle>
-          <CardDescription>已完成的咨询记录，包含用户评分、咨询师小结等详细信息</CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle>咨询记录看板</CardTitle>
+              <CardDescription>已完成的咨询记录，包含用户评分、咨询师小结等详细信息</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadConsultationRecords}
+              disabled={loading}
+              className="rounded-xl border-[#E8E2DB] hover:bg-gray-50"
+            >
+              {loading ? '加载中...' : '刷新'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -202,12 +403,15 @@ function ConsultationRecordsTab() {
           ) : consultationRecords.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>暂无完成的咨询记录</p>
+              <p className="text-sm mt-2 text-gray-400">
+                若刚刚完成咨询，请稍后刷新，或确认双方已在预约中完成「确认结束」操作。
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {consultationRecords.map((record: any) => (
-                <div key={record.id} className="p-4 border rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
+              {consultationRecords.map((record) => (
+                <div key={record.key} className="p-4 border rounded-lg space-y-3 bg-white shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
                       <p className="font-medium text-lg">
                         {record.user_name || record.user_nickname || '用户'}
@@ -219,19 +423,16 @@ function ConsultationRecordsTab() {
                       </p>
                       <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                         <span>账号：{record.user_username || '未知账号'}</span>
-                        {record.user_student_id && (
-                          <span>学号：{record.user_student_id}</span>
-                        )}
-                        {record.user_phone && (
-                          <span>电话：{record.user_phone}</span>
-                        )}
-                        {record.user_email && (
-                          <span>邮箱：{record.user_email}</span>
-                        )}
+                        {record.user_student_id && <span>学号：{record.user_student_id}</span>}
+                        {record.user_phone && <span>电话：{record.user_phone}</span>}
+                        {record.user_email && <span>邮箱：{record.user_email}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="default">已完成</Badge>
+                      <Badge variant={record.has_official_record ? 'default' : 'outline'}>
+                        {record.has_official_record ? '正式记录' : '来自预约'}
+                      </Badge>
                       <Button
                         size="sm"
                         variant="outline"
@@ -249,7 +450,7 @@ function ConsultationRecordsTab() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500">咨询类型：</span>
@@ -281,8 +482,8 @@ function ConsultationRecordsTab() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-4">
-                    {record.rating && (
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {record.rating != null && (
                       <div className="flex items-center gap-1">
                         <span className="text-sm text-gray-500">用户评分：</span>
                         <img
@@ -294,7 +495,7 @@ function ConsultationRecordsTab() {
                       </div>
                     )}
                     {record.review && (
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-[160px]">
                         <p className="text-sm text-gray-500 mb-1">用户评价：</p>
                         <p className="text-sm text-gray-700 bg-green-50 p-2 rounded line-clamp-1">
                           {record.review}
@@ -318,6 +519,17 @@ function ConsultationRecordsTab() {
           </DialogHeader>
           {selectedRecord && (
             <div className="space-y-4">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Badge variant={selectedRecord.has_official_record ? 'default' : 'outline'}>
+                  {selectedRecord.has_official_record ? '正式记录' : '来自预约（待生成正式记录）'}
+                </Badge>
+                {selectedRecord.record_id && (
+                  <Badge variant="outline">记录 ID {selectedRecord.record_id}</Badge>
+                )}
+                {selectedRecord.appointment_id && (
+                  <Badge variant="outline">预约 ID {selectedRecord.appointment_id}</Badge>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>用户姓名</Label>
@@ -380,9 +592,20 @@ function ConsultationRecordsTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <Label>双方确认状态</Label>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                    <Badge variant={selectedRecord.user_confirmed_complete ? 'default' : 'outline'}>
+                      用户{selectedRecord.user_confirmed_complete ? '已确认' : '未确认'}
+                    </Badge>
+                    <Badge variant={selectedRecord.counselor_confirmed_complete ? 'default' : 'outline'}>
+                      咨询师{selectedRecord.counselor_confirmed_complete ? '已确认' : '未确认'}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
                   <Label>用户评分</Label>
                   <div className="mt-1 flex items-center gap-2">
-                    {selectedRecord.rating ? (
+                    {selectedRecord.rating != null ? (
                       <>
                         <img
                           src={IconSunHealing}

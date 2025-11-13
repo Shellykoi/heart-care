@@ -15,79 +15,6 @@ from sqlalchemy import text
 import json
 import random
 
-def get_name_initials(name: str) -> str:
-    """获取姓名首字母小写缩写"""
-    if not name:
-        return ""
-    # 移除空格
-    name = name.strip()
-    
-    # 特殊处理：针对这些特定用户名
-    special_names = {
-        '一颗米粒': 'ykl',
-        '泡泡金鱼': 'ppj',
-        '烤焦面包': 'kjm',
-        '包袱': 'bf',
-        '梅干': 'mg'
-    }
-    
-    if name in special_names:
-        return special_names[name]
-    
-    # 获取每个字符的首字母（支持中文）
-    initials = []
-    # 中文拼音首字母映射（扩展版）
-    pinyin_map = {
-        '一': 'y', '颗': 'k', '米': 'm', '粒': 'l',
-        '泡': 'p', '金': 'j', '鱼': 'y',
-        '烤': 'k', '焦': 'j', '面': 'm', '包': 'b',
-        '袱': 'f',
-        '梅': 'm', '干': 'g',
-        '张': 'z', '王': 'w', '李': 'l', '刘': 'l', '陈': 'c',
-        '杨': 'y', '黄': 'h', '赵': 'z', '吴': 'w', '周': 'z',
-        '徐': 'x', '孙': 's', '马': 'm', '朱': 'z', '胡': 'h',
-        '郭': 'g', '何': 'h', '高': 'g', '林': 'l', '罗': 'l',
-        '郑': 'z', '梁': 'l', '谢': 'x', '宋': 's', '唐': 't',
-        '许': 'x', '韩': 'h', '冯': 'f', '邓': 'd', '曹': 'c',
-        '彭': 'p', '曾': 'z', '萧': 'x', '田': 't', '董': 'd',
-        '袁': 'y', '潘': 'p', '于': 'y', '蒋': 'j', '蔡': 'c',
-        '余': 'y', '杜': 'd', '叶': 'y', '程': 'c', '魏': 'w',
-        '苏': 's', '吕': 'l', '丁': 'd', '任': 'r', '卢': 'l',
-        '姚': 'y', '沈': 's', '钟': 'z', '姜': 'j', '崔': 'c',
-        '谭': 't', '陆': 'l', '范': 'f', '汪': 'w', '廖': 'l',
-        '石': 's', '金': 'j', '韦': 'w', '贾': 'j', '夏': 'x',
-        '付': 'f', '方': 'f', '邹': 'z', '熊': 'x', '白': 'b',
-        '孟': 'm', '秦': 'q', '邱': 'q', '江': 'j', '尹': 'y',
-        '薛': 'x', '闫': 'y', '段': 'd', '雷': 'l', '侯': 'h',
-        '龙': 'l', '史': 's', '陶': 't', '黎': 'l', '贺': 'h',
-        '顾': 'g', '毛': 'm', '郝': 'h', '龚': 'g', '邵': 's',
-        '万': 'w', '钱': 'q', '严': 'y', '覃': 'q', '武': 'w',
-        '戴': 'd', '莫': 'm', '孔': 'k', '向': 'x', '汤': 't',
-    }
-    
-    for char in name:
-        if char.isalpha():
-            # 如果是中文，取拼音首字母
-            if '\u4e00' <= char <= '\u9fff':  # 中文字符
-                if char in pinyin_map:
-                    initials.append(pinyin_map[char])
-                else:
-                    # 如果不在映射中，使用默认值
-                    initials.append('x')
-            else:
-                # 英文字母
-                initials.append(char.lower())
-    
-    # 取前三个字符的首字母
-    if len(initials) >= 3:
-        return ''.join(initials[:3])
-    elif len(initials) >= 2:
-        return ''.join(initials[:2]) + 'x'
-    elif len(initials) >= 1:
-        return initials[0] + 'xx'
-    else:
-        return 'xxx'
-
 # 擅长领域选项
 SPECIALTIES = [
     "学业压力", "情感困扰", "人际关系", "情绪管理", "焦虑抑郁",
@@ -150,8 +77,7 @@ def update_counselor_users():
                 continue
             
             # 1. 更新密码
-            initials = get_name_initials(username)
-            password = f"123456{initials}"
+            password = "123456"
             user.password_hash = get_password_hash(password)
             
             # 2. 确保角色是COUNSELOR
