@@ -63,7 +63,7 @@ def update_counselor_users():
             if "Duplicate column name" not in str(e) and "already exists" not in str(e).lower():
                 print(f"  注意: {str(e)}")
         # 需要更新的用户列表
-        usernames = ["一颗米粒", "泡泡金鱼", "烤焦面包", "包袱", "梅干"]
+        usernames = ["一颗米粒", "泡泡金鱼", "烤焦面包", "包袱", "梅干", "年糕兔"]
         
         updated_count = 0
         created_counselor_count = 0

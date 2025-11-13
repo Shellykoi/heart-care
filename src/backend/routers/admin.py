@@ -256,10 +256,8 @@ def create_counselor_account(
         if existing_user:
             raise HTTPException(status_code=400, detail="该用户名已存在")
         
-        # 创建用户账户
-        password = counselor_data.get("password", "").strip()
-        if not password:
-            raise HTTPException(status_code=400, detail="密码不能为空")
+        # 创建用户账户（统一使用固定初始密码，确保中文姓名不会导致生成规则异常）
+        password = "123456"
         
         new_user = User(
             username=username,
