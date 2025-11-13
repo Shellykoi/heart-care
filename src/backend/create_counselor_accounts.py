@@ -5,7 +5,7 @@
 
 from database import SessionLocal
 from models import Counselor, User, UserRole, Gender, CounselorStatus
-from auth import get_password_hash
+from auth import get_password_hash, get_default_counselor_password
 
 def create_counselor_accounts():
     """为所有没有账户的咨询师创建账户"""
@@ -37,8 +37,8 @@ def create_counselor_accounts():
                 # 如果用户名已存在，添加后缀
                 username = f"{counselor.real_name}_{counselor.id}"
             
-            # 生成密码：统一为 123456
-            password = "123456"
+            # 生成密码：统一为默认值
+            password = get_default_counselor_password()
             
             # 创建用户账户
             new_user = User(

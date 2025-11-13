@@ -9,7 +9,12 @@ from sqlalchemy import func
 from database import get_db
 from models import User, Counselor, Appointment, TestReport, CommunityPost, CounselorStatus
 from schemas import Statistics, CounselorResponse
-from auth import get_current_active_user, require_role
+from auth import (
+    get_current_active_user,
+    require_role,
+    get_password_hash,
+    get_default_counselor_password,
+)
 from typing import List
 
 router = APIRouter()
@@ -240,8 +245,7 @@ def create_counselor_account(
     db: Session = Depends(get_db)
 ):
     """管理员为咨询师创建账户"""
-    from auth import get_password_hash
-    from models import Counselor, UserRole, Gender, CounselorStatus
+    from models import UserRole, Gender
     
     try:
         # 验证必填字段
@@ -257,7 +261,7 @@ def create_counselor_account(
             raise HTTPException(status_code=400, detail="该用户名已存在")
         
         # 创建用户账户（统一使用固定初始密码，确保中文姓名不会导致生成规则异常）
-        password = "123456"
+        password = get_default_counselor_password()
         
         new_user = User(
             username=username,

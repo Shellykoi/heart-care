@@ -262,13 +262,9 @@ export function AdminDashboard({ onLogout, userInfo }: AdminDashboardProps) {
         toast.error('请输入擅长领域');
         return;
       }
-      
-      // 统一生成固定初始密码，避免中文姓名导致的拼音转换失败
-      const password = '123456';
-      
+      // 密码由后端统一设置为默认值（123456）
       const response = await adminApi.createCounselorAccount({
         ...newCounselorForm,
-        password,
       });
       
       console.log('创建咨询师成功:', response);

@@ -5,21 +5,44 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
+type EnvRecord = Record<string, string | boolean | undefined>;
+
 // API 基础配置
-const DEFAULT_API_ORIGIN = 'http://localhost:8000';
-const DEFAULT_API_BASE_URL = `${DEFAULT_API_ORIGIN}/api`;
 const metaEnv =
   typeof import.meta !== 'undefined'
-    ? ((import.meta as unknown as { env?: Record<string, string | undefined> }).env ??
-      undefined)
+    ? ((import.meta as unknown as { env?: EnvRecord }).env ?? undefined)
     : undefined;
-const resolvedBaseUrl =
-  (typeof metaEnv?.VITE_API_BASE_URL === 'string' && metaEnv.VITE_API_BASE_URL.trim()) ||
-  DEFAULT_API_BASE_URL;
+
+const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8000/api';
+const DEFAULT_PROD_API_BASE_URL = 'https://heart-care-m28z.onrender.com/api';
+const isDevMode =
+  (typeof metaEnv?.DEV === 'boolean' && metaEnv.DEV) ||
+  (typeof metaEnv?.MODE === 'string' && metaEnv.MODE === 'development');
+
+const envApiBase =
+  typeof metaEnv?.VITE_API_BASE_URL === 'string'
+    ? metaEnv.VITE_API_BASE_URL.trim()
+    : '';
+
+let resolvedBaseUrl = envApiBase;
+if (!resolvedBaseUrl) {
+  resolvedBaseUrl = isDevMode ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL;
+}
+if (!resolvedBaseUrl && typeof window !== 'undefined') {
+  resolvedBaseUrl = `${window.location.origin.replace(/\/+$/, '')}/api`;
+}
+if (!resolvedBaseUrl) {
+  resolvedBaseUrl = DEFAULT_DEV_API_BASE_URL;
+}
+
 const API_BASE_URL = resolvedBaseUrl.replace(/\/+$/, '');
 const API_ORIGIN = API_BASE_URL.endsWith('/api')
   ? API_BASE_URL.slice(0, -4)
   : API_BASE_URL;
+const DEFAULT_API_ORIGIN = (isDevMode ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL).replace(
+  /\/api$/,
+  ''
+);
 
 // 创建 axios 实例
 const api: AxiosInstance = axios.create({
@@ -508,7 +531,6 @@ export const adminApi = {
     specialty: string;
     experience_years: number;
     bio?: string;
-    password: string;
   }) => api.post('/admin/counselors/create', data),
 
   // 删除咨询师

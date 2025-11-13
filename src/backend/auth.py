@@ -17,6 +17,14 @@ from models import User
 # 密码加密配置
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# 默认初始化密码（咨询师账户等统一使用）
+DEFAULT_COUNSELOR_PASSWORD = "123456"
+
+
+def get_default_counselor_password() -> str:
+    """返回咨询师账户默认初始密码。"""
+    return DEFAULT_COUNSELOR_PASSWORD
+
 # JWT 配置
 SECRET_KEY = "your-secret-key-change-this-in-production"  # 生产环境请更换
 ALGORITHM = "HS256"

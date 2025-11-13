@@ -10,7 +10,7 @@
 
 from database import SessionLocal
 from models import Counselor, User, UserRole, Gender, CounselorStatus
-from auth import get_password_hash
+from auth import get_password_hash, get_default_counselor_password
 from sqlalchemy import text
 import json
 import random
@@ -77,7 +77,7 @@ def update_counselor_users():
                 continue
             
             # 1. 更新密码
-            password = "123456"
+            password = get_default_counselor_password()
             user.password_hash = get_password_hash(password)
             
             # 2. 确保角色是COUNSELOR

@@ -87,7 +87,6 @@ class CounselorAccountCreate(BaseModel):
     specialty: str
     experience_years: int
     bio: Optional[str] = None
-    password: str
 
 
 class CounselorUpdate(BaseModel):
