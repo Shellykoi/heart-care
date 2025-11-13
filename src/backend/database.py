@@ -1,32 +1,49 @@
 """
 数据库配置和连接管理
-使用 SQLAlchemy ORM 连接 MySQL 5.7
+使用 SQLAlchemy ORM 连接远程 MySQL/PostgreSQL
 """
+
+import os
+from typing import Dict, Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# MySQL 数据库连接配置
-# 格式：mysql+pymysql://用户名:密码@主机:端口/数据库名
-DATABASE_URL = "mysql+pymysql://shellykoi:123456koiii@localhost:3306/heart_care"
+# 数据库连接配置从环境变量读取，避免在代码库中硬编码凭据
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is not set. "
+        "Configure it in your local .env and Render service settings."
+    )
+
+
+def _build_connect_args(url: str) -> Dict[str, Any]:
+    """根据数据库类型构造 connect_args。"""
+    if url.startswith(("mysql://", "mysql+pymysql://", "mysql+mysqldb://")):
+        return {
+            "connect_timeout": 10,
+            "read_timeout": 30,
+            "write_timeout": 30,
+            "charset": "utf8mb4",
+        }
+    return {}
+
+
+connect_args = _build_connect_args(DATABASE_URL)
 
 # 创建数据库引擎
-# 注意：pymysql 的连接超时参数需要在 URL 中设置或使用 connect_args
 engine = create_engine(
     DATABASE_URL,
-    echo=True,  # 开发模式下打印 SQL 语句
-    pool_pre_ping=True,  # 连接池预检查，确保连接有效
-    pool_recycle=3600,  # 连接回收时间（秒）
-    pool_size=5,  # 连接池大小（减少并发连接数）
-    max_overflow=10,  # 最大溢出连接数
-    pool_timeout=30,  # 从连接池获取连接的超时时间（秒）
-    connect_args={
-        "connect_timeout": 10,  # 连接超时（秒）
-        "read_timeout": 30,  # 读取超时（秒）
-        "write_timeout": 30,  # 写入超时（秒）
-        "charset": "utf8mb4",  # 字符集
-    }
+    echo=os.getenv("SQLALCHEMY_ECHO", "false").lower() == "true",
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    pool_size=5,
+    max_overflow=10,
+    pool_timeout=30,
+    connect_args=connect_args,
 )
 
 # 创建会话工厂
