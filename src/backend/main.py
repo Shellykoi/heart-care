@@ -16,6 +16,14 @@ from database import get_db, engine
 from models import Base
 from routers import auth, users, counselors, appointments, tests, content, community, admin
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://shellykoi.github.io",
+    "https://shellykoi.github.io/heart-care",
+    "https://heart-care-m28z.onrender.com",
+]
+
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
 
@@ -31,42 +39,7 @@ app = FastAPI(
 # 生产环境：应该只允许特定域名
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003",
-        "http://localhost:3004",
-        "http://localhost:3005",   
-        "http://localhost:3006",
-        "http://localhost:3007",
-        "http://localhost:3008",
-        "http://localhost:3009",
-        "http://localhost:3010",
-        "http://localhost:3011",
-        "http://localhost:3012",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://127.0.0.1:3002",
-        "http://127.0.0.1:3003",
-        "http://127.0.0.1:3004",
-        "http://127.0.0.1:3005",
-        "http://127.0.0.1:3006",
-        "http://127.0.0.1:3007",
-        "http://127.0.0.1:3008",
-        "http://127.0.0.1:3009",
-        "http://127.0.0.1:3010",
-        "http://127.0.0.1:3011",
-        "http://127.0.0.1:3012",
-        "http://127.0.0.1:5173",
-        "https://shellykoi.github.io",
-        "https://shellykoi.github.io/heart-care",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000"
-    ],
-
-
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],  # 允许所有HTTP方法
     allow_headers=["*"],  # 允许所有请求头
@@ -83,36 +56,7 @@ async def options_handler(request: Request, full_path: str):
     origin = request.headers.get("Origin")
     
     # 如果Origin在允许列表中，返回它；否则返回第一个允许的origin
-    allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003",
-        "http://localhost:3004",
-        "http://localhost:3005",
-        "http://localhost:3006",
-        "http://localhost:3007",
-        "http://localhost:3008",
-        "http://localhost:3009",
-        "http://localhost:3010",
-        "http://localhost:3011",
-        "http://localhost:3012",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://127.0.0.1:3002",
-        "http://127.0.0.1:3003",
-        "http://127.0.0.1:3004",
-        "http://127.0.0.1:3005",
-        "http://127.0.0.1:3006",
-        "http://127.0.0.1:3007",
-        "http://127.0.0.1:3008",
-        "http://127.0.0.1:3009",
-        "http://127.0.0.1:3010",
-        "http://127.0.0.1:3011",
-        "http://127.0.0.1:3012",
-        "http://127.0.0.1:5173",
-    ]
+    allowed_origins = ALLOWED_ORIGINS
     
     # 如果Origin在允许列表中，使用它；否则使用第一个
     allow_origin = origin if origin in allowed_origins else allowed_origins[0] if allowed_origins else "*"
@@ -134,18 +78,7 @@ async def options_handler(request: Request, full_path: str):
 async def http_exception_handler(request: Request, exc: HTTPException):
     """处理 HTTP 异常，确保包含 CORS 头"""
     origin = request.headers.get("Origin")
-    allowed_origins = [
-        "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
-        "http://localhost:3003", "http://localhost:3004", "http://localhost:3005",
-        "http://localhost:3006", "http://localhost:3007", "http://localhost:3008",
-        "http://localhost:3009", "http://localhost:3010", "http://localhost:3011",
-        "http://localhost:3012", "http://localhost:5173",
-        "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002",
-        "http://127.0.0.1:3003", "http://127.0.0.1:3004", "http://127.0.0.1:3005",
-        "http://127.0.0.1:3006", "http://127.0.0.1:3007", "http://127.0.0.1:3008",
-        "http://127.0.0.1:3009", "http://127.0.0.1:3010", "http://127.0.0.1:3011",
-        "http://127.0.0.1:3012", "http://127.0.0.1:5173",
-    ]
+    allowed_origins = ALLOWED_ORIGINS
     allow_origin = origin if origin in allowed_origins else allowed_origins[0] if allowed_origins else "*"
     
     return JSONResponse(
@@ -208,18 +141,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     # 如果是认证错误，返回 401 而不是 422
     if auth_related:
         origin = request.headers.get("Origin")
-        allowed_origins = [
-            "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
-            "http://localhost:3003", "http://localhost:3004", "http://localhost:3005",
-            "http://localhost:3006", "http://localhost:3007", "http://localhost:3008",
-            "http://localhost:3009", "http://localhost:3010", "http://localhost:3011",
-            "http://localhost:3012", "http://localhost:5173",
-            "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002",
-            "http://127.0.0.1:3003", "http://127.0.0.1:3004", "http://127.0.0.1:3005",
-            "http://127.0.0.1:3006", "http://127.0.0.1:3007", "http://127.0.0.1:3008",
-            "http://127.0.0.1:3009", "http://127.0.0.1:3010", "http://127.0.0.1:3011",
-            "http://127.0.0.1:3012", "http://127.0.0.1:5173",
-        ]
+        allowed_origins = ALLOWED_ORIGINS
         allow_origin = origin if origin in allowed_origins else allowed_origins[0] if allowed_origins else "*"
         
         return JSONResponse(
@@ -238,18 +160,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     
     # 其他验证错误，返回 422
     origin = request.headers.get("Origin")
-    allowed_origins = [
-        "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
-        "http://localhost:3003", "http://localhost:3004", "http://localhost:3005",
-        "http://localhost:3006", "http://localhost:3007", "http://localhost:3008",
-        "http://localhost:3009", "http://localhost:3010", "http://localhost:3011",
-        "http://localhost:3012", "http://localhost:5173",
-        "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002",
-        "http://127.0.0.1:3003", "http://127.0.0.1:3004", "http://127.0.0.1:3005",
-        "http://127.0.0.1:3006", "http://127.0.0.1:3007", "http://127.0.0.1:3008",
-        "http://127.0.0.1:3009", "http://127.0.0.1:3010", "http://127.0.0.1:3011",
-        "http://127.0.0.1:3012", "http://127.0.0.1:5173",
-    ]
+    allowed_origins = ALLOWED_ORIGINS
     allow_origin = origin if origin in allowed_origins else allowed_origins[0] if allowed_origins else "*"
     
     return JSONResponse(
@@ -272,18 +183,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     # 如果是OPTIONS请求，直接返回200（CORS预检请求）
     if request.method == "OPTIONS":
         origin = request.headers.get("Origin")
-        allowed_origins = [
-            "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
-            "http://localhost:3003", "http://localhost:3004", "http://localhost:3005",
-            "http://localhost:3006", "http://localhost:3007", "http://localhost:3008",
-            "http://localhost:3009", "http://localhost:3010", "http://localhost:3011",
-            "http://localhost:3012", "http://localhost:5173",
-            "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002",
-            "http://127.0.0.1:3003", "http://127.0.0.1:3004", "http://127.0.0.1:3005",
-            "http://127.0.0.1:3006", "http://127.0.0.1:3007", "http://127.0.0.1:3008",
-            "http://127.0.0.1:3009", "http://127.0.0.1:3010", "http://127.0.0.1:3011",
-            "http://127.0.0.1:3012", "http://127.0.0.1:5173",
-        ]
+        allowed_origins = ALLOWED_ORIGINS
         allow_origin = origin if origin in allowed_origins else allowed_origins[0] if allowed_origins else "*"
         return JSONResponse(
             status_code=200,
@@ -302,18 +202,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     
     # 获取请求的Origin头并设置CORS头
     origin = request.headers.get("Origin")
-    allowed_origins = [
-        "http://localhost:3000", "http://localhost:3001", "http://localhost:3002",
-        "http://localhost:3003", "http://localhost:3004", "http://localhost:3005",
-        "http://localhost:3006", "http://localhost:3007", "http://localhost:3008",
-        "http://localhost:3009", "http://localhost:3010", "http://localhost:3011",
-        "http://localhost:3012", "http://localhost:5173",
-        "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002",
-        "http://127.0.0.1:3003", "http://127.0.0.1:3004", "http://127.0.0.1:3005",
-        "http://127.0.0.1:3006", "http://127.0.0.1:3007", "http://127.0.0.1:3008",
-        "http://127.0.0.1:3009", "http://127.0.0.1:3010", "http://127.0.0.1:3011",
-        "http://127.0.0.1:3012", "http://127.0.0.1:5173",
-    ]
+    allowed_origins = ALLOWED_ORIGINS
     allow_origin = origin if origin in allowed_origins else allowed_origins[0] if allowed_origins else "*"
     
     return JSONResponse(
