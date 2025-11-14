@@ -19,6 +19,12 @@ const isDevMode =
   (typeof metaEnv?.DEV === 'boolean' && metaEnv.DEV) ||
   (typeof metaEnv?.MODE === 'string' && metaEnv.MODE === 'development');
 
+// 检测是否在GitHub Pages环境（生产环境）
+const isProduction = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('github.io') || 
+   window.location.hostname.includes('github.com') ||
+   (!isDevMode && window.location.protocol === 'https:'));
+
 const envApiBase =
   typeof metaEnv?.VITE_API_BASE_URL === 'string'
     ? metaEnv.VITE_API_BASE_URL.trim()
@@ -26,11 +32,14 @@ const envApiBase =
 
 let resolvedBaseUrl = envApiBase;
 if (!resolvedBaseUrl) {
-  resolvedBaseUrl = isDevMode ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL;
+  // 如果在生产环境（GitHub Pages），使用生产后端URL
+  if (isProduction) {
+    resolvedBaseUrl = DEFAULT_PROD_API_BASE_URL;
+  } else {
+    resolvedBaseUrl = isDevMode ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL;
+  }
 }
-if (!resolvedBaseUrl && typeof window !== 'undefined') {
-  resolvedBaseUrl = `${window.location.origin.replace(/\/+$/, '')}/api`;
-}
+// 如果还是没有，且不在浏览器环境，使用开发URL
 if (!resolvedBaseUrl) {
   resolvedBaseUrl = DEFAULT_DEV_API_BASE_URL;
 }
