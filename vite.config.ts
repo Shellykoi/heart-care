@@ -8,7 +8,7 @@ const isGitHubPages = process.env.GITHUB_PAGES === 'true' || process.env.DEPLOY_
 const base = isGitHubPages ? `/${repositoryName}/` : '/';
 
 export default defineConfig({
-  base: '/heart-care/',  
+  base: base,  
   plugins: [react()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],

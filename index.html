@@ -1,58 +1,15 @@
 
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>南湖心理咨询管理平台</title>
-      <script type="module" crossorigin src="/heart-care/assets/index-CZXwuT-N.js"></script>
-      <link rel="stylesheet" crossorigin href="/heart-care/assets/index-BOqE-KF6.css">
-    </head>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>南湖心理咨询管理平台</title>
+  </head>
 
-    <body>
-      <div id="root"></div>
-      <script>
-        (function () {
-          var l = window.location;
-          if (!l.search || l.search.length < 2 || l.search[1] !== "/") {
-            return;
-          }
-
-          var segments = l.search.slice(2).split("&");
-          if (!segments.length) {
-            return;
-          }
-
-          var decodedPath = segments
-            .shift()
-            .replace(/~and~/g, "&")
-            .replace(/^\/+/, "")
-            .replace(/\/+$/, "");
-
-          var decodedQuery = segments
-            .map(function (segment) {
-              return segment.replace(/~and~/g, "&");
-            })
-            .filter(Boolean)
-            .join("&");
-
-          var basePath = l.pathname.replace(/\/$/, "");
-          var pathSegments = [];
-          if (basePath) {
-            pathSegments.push(basePath.replace(/^\/+/, ""));
-          }
-          if (decodedPath) {
-            pathSegments.push(decodedPath);
-          }
-
-          var newPath = "/" + pathSegments.join("/");
-          var newUrl = newPath + (decodedQuery ? "?" + decodedQuery : "") + l.hash;
-
-          if (newUrl !== l.pathname + l.search + l.hash) {
-            window.history.replaceState(null, "", newUrl);
-          }
-        })();
-      </script>
-    </body>
-  </html>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
   

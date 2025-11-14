@@ -1277,7 +1277,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
               {selectedAppointment.status === 'completed' && (
                 <div className="space-y-4 border-t pt-4">
                   {/* 确认状态信息 */}
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  {/*<div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <Label className="text-green-800 font-semibold mb-2 block">咨询完成确认</Label>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
@@ -1298,7 +1298,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
                         ✓ 双方已确认，咨询已完成
                       </div>
                     )}
-                  </div>
+                  </div>*/}
 
                   {/* 咨询师详细信息 */}
                   {selectedAppointment.counselor && (

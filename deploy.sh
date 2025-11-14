@@ -6,7 +6,7 @@ echo "开始部署到 GitHub Pages..."
 
 # 1. 构建项目
 echo "正在构建项目..."
-npm run build
+GITHUB_PAGES=true npm run build
 
 # 2. 复制 build 目录内容到根目录
 echo "正在复制 build 文件到根目录..."

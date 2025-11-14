@@ -5,6 +5,7 @@ echo 开始部署到 GitHub Pages...
 
 REM 1. 构建项目
 echo 正在构建项目...
+set GITHUB_PAGES=true
 call npm run build
 
 REM 2. 复制 build 目录内容到根目录
