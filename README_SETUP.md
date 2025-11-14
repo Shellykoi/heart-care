@@ -214,6 +214,7 @@ setx DATABASE_URL "mysql+pymysql://shellykoi:123456koiii@localhost:3306/heart_ca
    cd src/backend
    python -m uvicorn main:app --reload
     $env:DATABASE_URL = "mysql+pymysql://shellykoi:123456koiii@localhost:3306/heart_care"
+    $env:DATABASE_URL = "postgresql+psycopg2://neondb_owner:npg_5WkexcfaQoT1@ep-noisy-dust-a1u72hdr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
   python -m uvicorn main:app --reload
 
 # 4. 打开新终端，安装前端依赖（首次运行）
@@ -222,6 +223,13 @@ npm install
 
 # 5. 启动前端服务（保持终端运行）
 npm run dev
+
+
+git config --global https.proxy http://127.0.0.1:7897
+git config --global https.proxy http://127.0.0.1:7897
+git push origin main --verbose
+
+
 
 # 6. 访问应用
 # 前端: http://localhost:3000

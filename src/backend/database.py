@@ -33,7 +33,9 @@ def _ensure_database_url() -> str:
     """
     env_value = os.getenv("DATABASE_URL")
     if env_value and env_value.strip():
-        return env_value.strip()
+        # 去除可能的引号（单引号或双引号）
+        url = env_value.strip().strip('"').strip("'")
+        return url
 
     for env_file in ENV_FILES:
         if not env_file.exists():
@@ -42,9 +44,11 @@ def _ensure_database_url() -> str:
         values = dotenv_values(env_file)
         candidate = values.get("DATABASE_URL")
         if candidate and candidate.strip():
-            os.environ["DATABASE_URL"] = candidate.strip()
+            # 去除可能的引号（单引号或双引号）
+            url = candidate.strip().strip('"').strip("'")
+            os.environ["DATABASE_URL"] = url
             logger.info("DATABASE_URL loaded from %s", env_file.name)
-            return candidate.strip()
+            return url
 
     return ""
 
