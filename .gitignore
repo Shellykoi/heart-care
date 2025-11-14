@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+venv/
+env/
+
+# Build outputs
+build/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+
+# 注意：不要忽略根目录的 index.html 和 assets/ 目录
+# 这些是部署到 GitHub Pages 需要的文件
+

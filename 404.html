@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <script>
+      (function () {
+        var segmentCount = 1; // GitHub Pages project sites keep 1 path segment (the repo name)
+        var l = window.location;
+        var pathnameSegments = l.pathname
+          .slice(1)
+          .split("/")
+          .map(function (segment) {
+            return segment.trim();
+          })
+          .filter(Boolean);
+
+        var preservedSegments = pathnameSegments.slice(0, segmentCount).join("/");
+        var routeSegments = pathnameSegments.slice(segmentCount).join("/");
+
+        var redirectUrl =
+          l.protocol +
+          "//" +
+          l.hostname +
+          (l.port ? ":" + l.port : "") +
+          "/" +
+          (preservedSegments ? preservedSegments + "/" : "") +
+          "?/" +
+          routeSegments.replace(/&/g, "~and~") +
+          (l.search ? "&" + l.search.slice(1).replace(/&/g, "~and~") : "") +
+          l.hash;
+
+        l.replace(redirectUrl);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
+
