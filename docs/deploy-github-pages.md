@@ -25,8 +25,8 @@
    `.github/workflows/deploy.yml` 会在推送到 `main` 或手动触发时执行：
    - 安装依赖 → `npm ci`
    - 构建产物（自动设置 `GITHUB_PAGES=true`）→ `npm run build`
-   - 将 `build/index.html` 复制为 `build/404.html`，解决 SPA 子路由刷新 404 问题
-   - 上传产物并部署到 GitHub Pages
+   - 上传产物并部署到 GitHub Pages  
+     （`public/404.html` 已内置 SPA 重定向脚本，可自动处理子路由 404）
 
 ## 3. 首次部署步骤
 # Workflow 监听分支
