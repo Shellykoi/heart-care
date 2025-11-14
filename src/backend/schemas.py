@@ -42,17 +42,38 @@ class UserResponse(UserBase):
     id: int
     nickname: Optional[str]
     avatar: Optional[str] = None
-    gender: Gender
+    gender: Optional[Gender] = Field(default=Gender.OTHER)
     gender_display: Optional[str] = None  # 性别中文显示
     role: UserRole
     role_display: Optional[str] = None  # 角色中文显示
     is_active: bool
     created_at: datetime
 
+    @model_validator(mode='before')
+    @classmethod
+    def ensure_gender(cls, data):
+        """确保 gender 字段始终有默认值"""
+        # data 可能是 ORM 对象，也可能是 dict，需要分别处理
+        if isinstance(data, dict):
+            gender = data.get("gender")
+            if gender in (None, "", "null"):
+                data = {**data, "gender": Gender.OTHER}
+        else:
+            gender = getattr(data, "gender", None)
+            if gender in (None, "", "null"):
+                try:
+                    setattr(data, "gender", Gender.OTHER)
+                except Exception:
+                    # 如果无法设置属性，则在 after 阶段处理
+                    pass
+        return data
+
     @model_validator(mode='after')
     def set_displays(self):
         """设置中文显示字段"""
         from utils import get_gender_display, get_user_role_display
+        if self.gender in (None, "", "null"):
+            self.gender = Gender.OTHER
         self.gender_display = get_gender_display(self.gender)
         self.role_display = get_user_role_display(self.role)
         return self

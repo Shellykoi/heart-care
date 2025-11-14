@@ -20,25 +20,13 @@ def migrate():
     
     with engine.begin() as conn:
         # 检查 report_count 字段是否存在
-        if 'sqlite' in db_url:
-            # SQLite
-            result = conn.execute(text("PRAGMA table_info(community_posts)"))
-            columns = [row[1] for row in result]
-            if 'report_count' not in columns:
-                print("添加 report_count 字段...")
-                conn.execute(text("ALTER TABLE community_posts ADD COLUMN report_count INTEGER DEFAULT 0"))
-                print("✓ report_count 字段已添加")
-            else:
-                print("✓ report_count 字段已存在")
-        else:
-            # PostgreSQL/MySQL
-            try:
-                conn.execute(text("SELECT report_count FROM community_posts LIMIT 1"))
-                print("✓ report_count 字段已存在")
-            except Exception:
-                print("添加 report_count 字段...")
-                conn.execute(text("ALTER TABLE community_posts ADD COLUMN report_count INTEGER DEFAULT 0"))
-                print("✓ report_count 字段已添加")
+        try:
+            conn.execute(text("SELECT report_count FROM community_posts LIMIT 1"))
+            print("✓ report_count 字段已存在")
+        except Exception:
+            print("添加 report_count 字段...")
+            conn.execute(text("ALTER TABLE community_posts ADD COLUMN report_count INTEGER DEFAULT 0"))
+            print("✓ report_count 字段已添加")
         
         # 更新现有帖子：将 is_approved=False 改为 True（因为现在默认直接发布）
         print("更新现有帖子的审核状态...")
@@ -52,20 +40,7 @@ def migrate():
         except Exception:
             print("创建 post_reports 表...")
             # 创建 post_reports 表
-            if 'sqlite' in db_url:
-                conn.execute(text("""
-                    CREATE TABLE post_reports (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        post_id INTEGER NOT NULL,
-                        user_id INTEGER NOT NULL,
-                        reason VARCHAR(200),
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (post_id) REFERENCES community_posts(id),
-                        FOREIGN KEY (user_id) REFERENCES users(id),
-                        UNIQUE(post_id, user_id)
-                    )
-                """))
-            elif 'mysql' in db_url:
+            if 'mysql' in db_url:
                 # MySQL
                 conn.execute(text("""
                     CREATE TABLE post_reports (
@@ -79,7 +54,7 @@ def migrate():
                         UNIQUE(post_id, user_id)
                     )
                 """))
-            else:
+            elif 'postgresql' in db_url:
                 # PostgreSQL
                 conn.execute(text("""
                     CREATE TABLE post_reports (
@@ -93,6 +68,9 @@ def migrate():
                         UNIQUE(post_id, user_id)
                     )
                 """))
+            else:
+                raise RuntimeError("Unsupported database type. Expected MySQL or PostgreSQL.")
+
             print("✓ post_reports 表已创建")
     
     print("\n数据库迁移完成！")

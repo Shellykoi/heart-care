@@ -2,12 +2,16 @@
 认证路由 - 登录、注册、Token管理
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, UserRole
+from models import Gender, User, UserRole
 from schemas import UserCreate, UserLogin, Token, UserResponse
 from auth import verify_password, get_password_hash, create_access_token, get_current_user
+
+logger = logging.getLogger("heart_care.auth")
 
 router = APIRouter()
 
@@ -73,41 +77,84 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
     - 支持用户名/手机号/邮箱登录
     - 返回 JWT Token 和用户信息
     """
+    account = (login_data.account or "").strip()
+    if not account:
+        logger.warning("Login attempt with empty account field")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="账号不能为空"
+        )
+
+    logger.info("Login attempt for account='%s'", account)
+
     # 查找用户（支持多种登录方式）
     user = db.query(User).filter(
-        (User.username == login_data.account) |
-        (User.nickname == login_data.account) |
-        (User.phone == login_data.account) |
-        (User.email == login_data.account)
+        (User.username == account) |
+        (User.nickname == account) |
+        (User.phone == account) |
+        (User.email == account) |
+        (User.student_id == account)
     ).first()
-    
+
     if not user:
+        logger.warning("Login failed: account='%s' not found", account)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="账号或密码错误"
         )
-    
+
+    if not user.password_hash:
+        logger.error("Login failed: user_id=%s missing password hash", user.id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="账户密码信息异常，请联系管理员"
+        )
+
     # 验证密码
-    if not verify_password(login_data.password, user.password_hash):
+    try:
+        password_valid = verify_password(login_data.password, user.password_hash)
+    except ValueError as exc:
+        logger.exception(
+            "Login failed: invalid password hash for user_id=%s", user.id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="账户密码信息异常，请联系管理员"
+        ) from exc
+
+    if not password_valid:
+        logger.warning("Login failed: incorrect password for user_id=%s", user.id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="账号或密码错误"
         )
-    
+
     # 检查账户状态
     if not user.is_active:
+        logger.warning("Login blocked: inactive user_id=%s", user.id)
         raise HTTPException(status_code=400, detail="账户已被禁用")
-    
+
+    if user.gender in (None, "", "null"):
+        user.gender = Gender.OTHER
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            logger.warning("Failed to persist default gender for user_id=%s", user.id)
+
     # 生成 Token
     access_token = create_access_token(data={"sub": user.id})
-    
+
     # 返回 Token 对象（FastAPI 会自动使用 Token schema 序列化）
-    from schemas import Token, UserResponse
-    return Token(
+    response = Token(
         access_token=access_token,
         token_type="bearer",
         user_info=UserResponse.model_validate(user)
     )
+
+    logger.info("Login success for user_id=%s", user.id)
+    return response
 
 
 @router.post("/logout")

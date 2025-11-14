@@ -205,10 +205,16 @@ python main.py
 
 3000..3010 | ForEach-Object { Get-NetTCPConnection -LocalPort $_ -ErrorAction SilentlyContinue } | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force }
 
+
+
+setx DATABASE_URL "mysql+pymysql://shellykoi:123456koiii@localhost:3306/heart_care"
+
    # 停止当前运行的后端服务
    # 然后重新启动
    cd src/backend
    python -m uvicorn main:app --reload
+    $env:DATABASE_URL = "mysql+pymysql://shellykoi:123456koiii@localhost:3306/heart_care"
+  python -m uvicorn main:app --reload
 
 # 4. 打开新终端，安装前端依赖（首次运行）
 cd <项目根目录>

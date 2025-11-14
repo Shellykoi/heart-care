@@ -21,19 +21,7 @@ def migrate():
         except Exception:
             print("创建 counselor_favorites 表...")
             # 创建 counselor_favorites 表
-            if 'sqlite' in DATABASE_URL:
-                conn.execute(text("""
-                    CREATE TABLE counselor_favorites (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
-                        counselor_id INTEGER NOT NULL,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id),
-                        FOREIGN KEY (counselor_id) REFERENCES counselors(id),
-                        UNIQUE(user_id, counselor_id)
-                    )
-                """))
-            elif 'mysql' in DATABASE_URL:
+            if 'mysql' in DATABASE_URL:
                 # MySQL
                 conn.execute(text("""
                     CREATE TABLE counselor_favorites (
@@ -48,7 +36,7 @@ def migrate():
                         INDEX idx_counselor_id (counselor_id)
                     )
                 """))
-            else:
+            elif 'postgresql' in DATABASE_URL:
                 # PostgreSQL
                 conn.execute(text("""
                     CREATE TABLE counselor_favorites (
@@ -61,6 +49,9 @@ def migrate():
                         UNIQUE(user_id, counselor_id)
                     )
                 """))
+            else:
+                raise RuntimeError("Unsupported database type. Expected MySQL or PostgreSQL.")
+
             print("✓ counselor_favorites 表已创建")
     
     print("\n数据库迁移完成！")
