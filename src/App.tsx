@@ -4,6 +4,7 @@ import { UserDashboard } from './components/UserDashboard';
 import { CounselorDashboard } from './components/CounselorDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Toaster } from './components/ui/sonner';
+import { FloatingEye } from './components/FloatingEye';
 
 type UserRole = 'user' | 'counselor' | 'admin' | null;
 
@@ -97,6 +98,7 @@ export default function App() {
       <>
         <LoginPage onLogin={handleLogin} />
         <Toaster />
+        <FloatingEye />
       </>
     );
   }
@@ -107,6 +109,7 @@ export default function App() {
       {userRole === 'counselor' && <CounselorDashboard onLogout={handleLogout} userInfo={userInfo} />}
       {userRole === 'admin' && <AdminDashboard onLogout={handleLogout} userInfo={userInfo} />}
       <Toaster />
+      <FloatingEye />
     </>
   );
 }
