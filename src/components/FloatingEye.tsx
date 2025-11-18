@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 export function FloatingEye() {
   const leftEyeRef = useRef<HTMLDivElement>(null);
@@ -6,66 +6,134 @@ export function FloatingEye() {
   const rightEyeRef = useRef<HTMLDivElement>(null);
   const rightPupilRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 从 localStorage 读取保存的位置，如果没有则使用默认位置
+  const getInitialPosition = () => {
+    const saved = localStorage.getItem('floatingEyePosition');
+    if (saved) {
+      try {
+        const { x, y } = JSON.parse(saved);
+        return { x, y };
+      } catch (e) {
+        // 如果解析失败，使用默认值
+      }
+    }
+    return { x: null, y: null }; // 使用 bottom 和 right 作为默认
+  };
 
+  const [position, setPosition] = useState(getInitialPosition);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const positionRef = useRef(position);
+  
+  // 同步 positionRef 和 position state
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
+  // 拖动处理
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    
+    dragOffsetRef.current = { x: offsetX, y: offsetY };
+    setIsDragging(true);
+    e.preventDefault(); // 防止文本选择
+  };
+
+  // 鼠标移动和眼睛跟随处理
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // 处理左眼
-      if (leftEyeRef.current && leftPupilRef.current) {
-        const eye = leftEyeRef.current;
-        const pupil = leftPupilRef.current;
+      if (isDragging && containerRef.current) {
+        const newX = e.clientX - dragOffsetRef.current.x;
+        const newY = e.clientY - dragOffsetRef.current.y;
         
-        const rect = eye.getBoundingClientRect();
-        const eyeCenterX = rect.left + rect.width / 2;
-        const eyeCenterY = rect.top + rect.height / 2;
+        // 限制在视窗内
+        const maxX = window.innerWidth - (containerRef.current.offsetWidth || 64);
+        const maxY = window.innerHeight - (containerRef.current.offsetHeight || 28);
         
-        const deltaX = e.clientX - eyeCenterX;
-        const deltaY = e.clientY - eyeCenterY;
-        const angle = Math.atan2(deltaY, deltaX);
+        const clampedX = Math.max(0, Math.min(newX, maxX));
+        const clampedY = Math.max(0, Math.min(newY, maxY));
         
-        const maxDistance = 6; // 小眼睛的瞳孔移动距离更小
-        const distance = Math.min(
-          Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 5,
-          maxDistance
-        );
-        
-        const pupilX = Math.cos(angle) * distance;
-        const pupilY = Math.sin(angle) * distance;
-        
-        pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
-      }
+        const newPosition = { x: clampedX, y: clampedY };
+        setPosition(newPosition);
+        positionRef.current = newPosition;
+      } else {
+        // 处理眼睛跟随鼠标（仅在非拖动状态）
+        // 处理左眼
+        if (leftEyeRef.current && leftPupilRef.current) {
+          const eye = leftEyeRef.current;
+          const pupil = leftPupilRef.current;
+          
+          const rect = eye.getBoundingClientRect();
+          const eyeCenterX = rect.left + rect.width / 2;
+          const eyeCenterY = rect.top + rect.height / 2;
+          
+          const deltaX = e.clientX - eyeCenterX;
+          const deltaY = e.clientY - eyeCenterY;
+          const angle = Math.atan2(deltaY, deltaX);
+          
+          const maxDistance = 6; // 小眼睛的瞳孔移动距离更小
+          const distance = Math.min(
+            Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 5,
+            maxDistance
+          );
+          
+          const pupilX = Math.cos(angle) * distance;
+          const pupilY = Math.sin(angle) * distance;
+          
+          pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
+        }
 
-      // 处理右眼
-      if (rightEyeRef.current && rightPupilRef.current) {
-        const eye = rightEyeRef.current;
-        const pupil = rightPupilRef.current;
-        
-        const rect = eye.getBoundingClientRect();
-        const eyeCenterX = rect.left + rect.width / 2;
-        const eyeCenterY = rect.top + rect.height / 2;
-        
-        const deltaX = e.clientX - eyeCenterX;
-        const deltaY = e.clientY - eyeCenterY;
-        const angle = Math.atan2(deltaY, deltaX);
-        
-        const maxDistance = 6;
-        const distance = Math.min(
-          Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 5,
-          maxDistance
-        );
-        
-        const pupilX = Math.cos(angle) * distance;
-        const pupilY = Math.sin(angle) * distance;
-        
-        pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
+        // 处理右眼
+        if (rightEyeRef.current && rightPupilRef.current) {
+          const eye = rightEyeRef.current;
+          const pupil = rightPupilRef.current;
+          
+          const rect = eye.getBoundingClientRect();
+          const eyeCenterX = rect.left + rect.width / 2;
+          const eyeCenterY = rect.top + rect.height / 2;
+          
+          const deltaX = e.clientX - eyeCenterX;
+          const deltaY = e.clientY - eyeCenterY;
+          const angle = Math.atan2(deltaY, deltaX);
+          
+          const maxDistance = 6;
+          const distance = Math.min(
+            Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 5,
+            maxDistance
+          );
+          
+          const pupilX = Math.cos(angle) * distance;
+          const pupilY = Math.sin(angle) * distance;
+          
+          pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        // 保存位置到 localStorage
+        const currentPos = positionRef.current;
+        if (currentPos.x !== null && currentPos.y !== null) {
+          localStorage.setItem('floatingEyePosition', JSON.stringify(currentPos));
+        }
       }
     };
 
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
     
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [isDragging]);
 
   // 渲染单个眼睛的函数
   const renderEye = (
@@ -127,19 +195,37 @@ export function FloatingEye() {
     </div>
   );
 
+  // 计算容器样式
+  const containerStyle: React.CSSProperties = {
+    position: 'fixed',
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+    zIndex: 99999,
+    cursor: isDragging ? 'grabbing' : 'grab',
+    userSelect: 'none',
+    transition: isDragging ? 'none' : 'opacity 0.2s ease-out',
+    ...(position.x !== null && position.y !== null
+      ? {
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          bottom: 'auto',
+          right: 'auto',
+        }
+      : {
+          bottom: '20px',
+          right: '20px',
+        }),
+    ...(isDragging && {
+      opacity: 0.85,
+    }),
+  };
+
   return (
     <div
       ref={containerRef}
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        display: 'flex',
-        gap: '8px',
-        alignItems: 'center',
-        zIndex: 99999,
-        pointerEvents: 'none',
-      }}
+      onMouseDown={handleMouseDown}
+      style={containerStyle}
     >
       {renderEye(leftEyeRef, leftPupilRef)}
       {renderEye(rightEyeRef, rightPupilRef)}
