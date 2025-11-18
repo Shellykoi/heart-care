@@ -239,7 +239,7 @@ class Appointment(Base):
     # 关系
     user = relationship("User", back_populates="appointments", foreign_keys=[user_id])
     counselor = relationship("Counselor", back_populates="appointments")
-    rating = relationship("CounselorRating", back_populates="appointment", uselist=False)
+    counselor_rating = relationship("CounselorRating", back_populates="appointment", uselist=False)
 
 
 class TestScale(Base):
@@ -483,7 +483,7 @@ class CounselorRating(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 关系
-    appointment = relationship("Appointment")
+    appointment = relationship("Appointment", back_populates="counselor_rating")
     user = relationship("User")
     counselor = relationship("Counselor")
 

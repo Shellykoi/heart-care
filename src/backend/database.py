@@ -184,7 +184,54 @@ def _ensure_users_table_columns() -> None:
                 logger.error("补充字段 users.%s 失败：%s", column_name, exc)
 
 
+def _ensure_appointments_table_columns() -> None:
+    """
+    启动时检查 appointments 表是否缺少关键字段，若缺失则自动补齐。
+    主要用于处理旧版本数据库缺少 rating 和 review 字段导致的运行错误。
+    """
+    try:
+        inspector = inspect(engine)
+    except Exception as exc:  # pragma: no cover - 仅在启动日志中提示
+        logger.warning("无法检查数据库 schema：%s", exc)
+        return
+
+    if "appointments" not in inspector.get_table_names():
+        return
+
+    existing_columns = {col["name"] for col in inspector.get_columns("appointments")}
+
+    migrations: list[tuple[str, str]] = []
+
+    if "rating" not in existing_columns:
+        migrations.append(
+            (
+                "rating",
+                "ALTER TABLE appointments ADD COLUMN rating INTEGER NULL",
+            )
+        )
+
+    if "review" not in existing_columns:
+        migrations.append(
+            (
+                "review",
+                "ALTER TABLE appointments ADD COLUMN review TEXT NULL",
+            )
+        )
+
+    if not migrations:
+        return
+
+    with engine.begin() as connection:
+        for column_name, statement in migrations:
+            try:
+                connection.execute(text(statement))
+                logger.info("已补充缺失的字段 appointments.%s", column_name)
+            except Exception as exc:  # pragma: no cover
+                logger.error("补充字段 appointments.%s 失败：%s", column_name, exc)
+
+
 _ensure_users_table_columns()
+_ensure_appointments_table_columns()
 
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
