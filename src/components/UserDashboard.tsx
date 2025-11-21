@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo , useRef} from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -36,6 +36,7 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
+
 
 type AppointmentStatusType = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected';
 
@@ -588,6 +589,48 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
     subtitle: `Hi，${displayName}`
   };
 
+  const FloatingEye = () => {
+  const eyeRef = useRef<HTMLDivElement>(null);
+  const pupilRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const eye = eyeRef.current;
+      const pupil = pupilRef.current;
+      if (!eye || !pupil) return;
+
+      const rect = eye.getBoundingClientRect();
+      const angle = Math.atan2(
+        event.clientY - (rect.top + rect.height / 2),
+        event.clientX - (rect.left + rect.width / 2)
+      );
+      const distance = Math.min(rect.width * 0.2, 12);
+      pupil.style.transform = `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px)`;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  return (
+    <div className="pointer-events-none fixed right-6 bottom-8 z-50">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#E0DAD1] bg-gradient-to-br from-[#FFF8EF] to-[#F4E6D6] shadow-[0_12px_28px_rgba(32,26,20,0.18)]">
+        <div
+          ref={eyeRef}
+          className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#D9C8B5] bg-gradient-to-br from-[#F6E4CE] to-[#E9CFB0]"
+        >
+          <span
+            ref={pupilRef}
+            className="h-4 w-4 rounded-full bg-[#2D1A12] ring-4 ring-[#F9E7D0] transition-transform duration-75 ease-out"
+          />
+          <span className="pointer-events-none absolute left-1/2 top-1/3 h-2 w-2 -translate-x-1/2 rounded-full bg-white/80" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
   return (
     <SidebarLayout
       userInfo={userInfo}
@@ -598,6 +641,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
       role="user"
       children={
         <>
+        <FloatingEye />
           <div className="mb-10">
             <div className="flex flex-col gap-1 text-left">
               {currentTabMeta.subtitle && (

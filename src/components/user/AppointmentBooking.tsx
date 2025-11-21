@@ -268,6 +268,57 @@ export function AppointmentBooking() {
     loadCounselors();
   }, [selectedSpecialties, selectedMethods, selectedGender, sortBy]);
 
+  // 加载Spline 3D组件
+  useEffect(() => {
+    // 检查脚本是否已加载，避免重复加载
+    const scriptId = 'spline-viewer-script';
+    const existingScript = document.getElementById(scriptId);
+    
+    if (existingScript) {
+      return; // 脚本已存在，不需要重复加载
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.type = 'module';
+    script.src = 'https://unpkg.com/@splinetool/viewer@1.12.0/build/spline-viewer.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    // 添加样式确保 spline-viewer 内容居中显示
+    const styleId = 'spline-viewer-center-style';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        spline-viewer {
+          display: block !important;
+          position: relative !important;
+        }
+        spline-viewer canvas {
+          object-fit: contain !important;
+          object-position: center center !important;
+          display: block !important;
+          margin: 0 auto !important;
+        }
+        spline-viewer > canvas,
+        spline-viewer > * {
+          object-fit: contain !important;
+          object-position: center center !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    return () => {
+      // 清理脚本（仅在组件卸载时）
+      const scriptToRemove = document.getElementById(scriptId);
+      if (scriptToRemove && document.body.contains(scriptToRemove)) {
+        document.body.removeChild(scriptToRemove);
+      }
+    };
+  }, []);
+
   const loadMyCounselors = async () => {
     try {
       const data = await appointmentApi.getMyCounselors();
@@ -617,79 +668,105 @@ export function AppointmentBooking() {
 
   return (
     <div className="space-y-6">
+      {/* 3D组件 - 在标题下方紧贴显示 */}
+      <div 
+        className="w-full rounded-lg overflow-hidden" 
+        style={{ 
+          height: '300px',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f5f5f5'
+        }}
+      >
+        {/* @ts-ignore - spline-viewer is a custom element */}
+        <spline-viewer 
+          url="https://prod.spline.design/HPbL1AL6VxxOyWZc/scene.splinecode"
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'block'
+          }}
+        />
+      </div>
+
       {/* 顶部筛选区 - 标签化选择 */}
       <Card className="sticky top-0 z-10 shadow-md">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Filter className="w-4 h-4" />
             筛选咨询师
             {(selectedSpecialties.length > 0 || selectedMethods.length > 0 || selectedGender !== 'all') && (
-              <Badge className="ml-2 bg-blue-600 text-white">
+              <Badge className="ml-2 bg-blue-600 text-white text-xs">
                 {selectedSpecialties.length + selectedMethods.length + (selectedGender !== 'all' ? 1 : 0)}
               </Badge>
             )}
           </CardTitle>
-          <CardDescription>根据您的需求筛选合适的心理咨询师</CardDescription>
+          <CardDescription className="text-xs mt-1">根据您的需求筛选合适的心理咨询师</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* 咨询方向筛选 - 标签化 */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">咨询方向</Label>
-            <div className="flex flex-wrap gap-2">
-              {SPECIALTY_OPTIONS.map(option => {
-                const isSelected = selectedSpecialties.includes(option.value);
-                return (
-                  <Badge
-                    key={option.value}
-                    variant={isSelected ? 'default' : 'outline'}
-                    className={cn(
-                      "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95",
-                      isSelected 
-                        ? "bg-blue-600 text-white hover:bg-blue-700" 
-                        : "hover:bg-blue-50"
-                    )}
-                    onClick={() => handleSpecialtyToggle(option.value)}
-                  >
-                    {option.label}
-                  </Badge>
-                );
-              })}
+        <CardContent className="space-y-3 pt-2">
+          {/* 咨询方向和咨询方式并排显示 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 咨询方向筛选 - 标签化 */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">咨询方向</Label>
+              <div className="flex flex-wrap gap-2">
+                {SPECIALTY_OPTIONS.map(option => {
+                  const isSelected = selectedSpecialties.includes(option.value);
+                  return (
+                    <Badge
+                      key={option.value}
+                      variant={isSelected ? 'default' : 'outline'}
+                      className={cn(
+                        "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 text-xs",
+                        isSelected 
+                          ? "bg-blue-600 text-white hover:bg-blue-700" 
+                          : "hover:bg-blue-50"
+                      )}
+                      onClick={() => handleSpecialtyToggle(option.value)}
+                    >
+                      {option.label}
+                    </Badge>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* 咨询方式筛选 - 标签化 */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">咨询方式</Label>
-            <div className="flex flex-wrap gap-2">
-              {CONSULT_METHOD_OPTIONS.map(option => {
-                const Icon = option.icon;
-                const isSelected = selectedMethods.includes(option.value);
-                return (
-                  <Badge
-                    key={option.value}
-                    variant={isSelected ? 'default' : 'outline'}
-                    className={cn(
-                      "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1",
-                      isSelected 
-                        ? "bg-blue-600 text-white hover:bg-blue-700" 
-                        : "hover:bg-blue-50"
-                    )}
-                    onClick={() => handleMethodToggle(option.value)}
-                  >
-                    <Icon className="w-3 h-3" />
-                    {option.label}
-                  </Badge>
-                );
-              })}
+            {/* 咨询方式筛选 - 标签化 */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">咨询方式</Label>
+              <div className="flex flex-wrap gap-2">
+                {CONSULT_METHOD_OPTIONS.map(option => {
+                  const Icon = option.icon;
+                  const isSelected = selectedMethods.includes(option.value);
+                  return (
+                    <Badge
+                      key={option.value}
+                      variant={isSelected ? 'default' : 'outline'}
+                      className={cn(
+                        "cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-1 text-xs",
+                        isSelected 
+                          ? "bg-blue-600 text-white hover:bg-blue-700" 
+                          : "hover:bg-blue-50"
+                      )}
+                      onClick={() => handleMethodToggle(option.value)}
+                    >
+                      <Icon className="w-3 h-3" />
+                      {option.label}
+                    </Badge>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           {/* 性别筛选和排序 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label className="text-sm font-medium">咨询师性别</Label>
               <Select value={selectedGender} onValueChange={setSelectedGender}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -700,10 +777,10 @@ export function AppointmentBooking() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label className="text-sm font-medium">排序方式</Label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -720,9 +797,9 @@ export function AppointmentBooking() {
           {/* 已选筛选条件标签 */}
           {(selectedSpecialties.length > 0 || selectedMethods.length > 0 || selectedGender !== 'all') && (
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-              <span className="text-sm text-gray-500">已选条件：</span>
+              <span className="text-xs text-gray-500">已选条件：</span>
               {selectedSpecialties.map(specialty => (
-                <Badge key={specialty} variant="secondary" className="gap-1">
+                <Badge key={specialty} variant="secondary" className="gap-1 text-xs">
                   {SPECIALTY_OPTIONS.find(opt => opt.value === specialty)?.label}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
@@ -733,7 +810,7 @@ export function AppointmentBooking() {
               {selectedMethods.map(method => {
                 const option = CONSULT_METHOD_OPTIONS.find(opt => opt.value === method);
                 return (
-                  <Badge key={method} variant="secondary" className="gap-1">
+                  <Badge key={method} variant="secondary" className="gap-1 text-xs">
                     {option?.label}
                     <X 
                       className="w-3 h-3 cursor-pointer" 
@@ -743,7 +820,7 @@ export function AppointmentBooking() {
                 );
               })}
               {selectedGender !== 'all' && (
-                <Badge variant="secondary" className="gap-1">
+                <Badge variant="secondary" className="gap-1 text-xs">
                   {selectedGender === 'female' ? '女' : '男'}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
@@ -756,7 +833,7 @@ export function AppointmentBooking() {
 
           {/* 筛选结果数 - 悬浮气泡样式 */}
           <div className="flex items-center justify-between pt-2 border-t">
-            <div className="text-sm text-gray-600">
+            <div className="text-xs text-gray-600">
               找到 <span className="font-semibold text-blue-600">{resultCount}</span> 位符合条件的咨询师
             </div>
           </div>

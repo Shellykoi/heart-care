@@ -9,3 +9,5 @@ if __name__ == "__main__":
     script_path = Path(__file__).parent / "src" / "backend" / "sync_all_data_to_cloud.py"
     subprocess.run([sys.executable, str(script_path)])
 
+
+
