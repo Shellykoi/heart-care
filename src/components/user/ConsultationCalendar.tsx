@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected' | string;
 
@@ -61,6 +62,8 @@ const monthGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '4px',
+  alignItems: 'flex-end',
+  position: 'relative',
 };
 
 const monthNameStyle: React.CSSProperties = {
@@ -74,6 +77,41 @@ const monthYearStyle: React.CSSProperties = {
   fontSize: '12px',
   color: '#5E5E60',
   margin: 0,
+};
+
+const arrowButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '-4px',
+  right: '0',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  userSelect: 'none',
+};
+
+const arrowButtonBaseStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s ease, opacity 0.2s ease',
+  backgroundColor: 'transparent',
+};
+
+const arrowIconStyle: React.CSSProperties = {
+  width: '18px',
+  height: '18px',
+  color: '#8E8E93',
+  transition: 'color 0.2s ease',
+};
+
+const arrowIconDisabledStyle: React.CSSProperties = {
+  ...arrowIconStyle,
+  opacity: 0.3,
+  cursor: 'not-allowed',
 };
 
 const calendarBodyStyle: React.CSSProperties = {
@@ -213,8 +251,43 @@ export function ConsultationCalendar({
   title = '我的咨询日程',
 }: ConsultationCalendarProps) {
   const today = useMemo(() => new Date(), []);
-  const calendarYear = today.getFullYear();
-  const calendarMonth = today.getMonth();
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  
+  const calendarYear = currentYear;
+  const calendarMonth = currentMonth;
+  
+  // 判断是否是当前月
+  const isCurrentMonth = useMemo(() => {
+    return (
+      currentYear === today.getFullYear() &&
+      currentMonth === today.getMonth()
+    );
+  }, [currentYear, currentMonth, today]);
+  
+  // 切换到上一个月
+  const handlePreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+  
+  // 切换到下一个月
+  const handleNextMonth = () => {
+    if (isCurrentMonth) {
+      // 如果是当前月，不允许切换到下一个月
+      return;
+    }
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
 
   const groupedAppointments = useMemo(() => {
     const grouped = new Map<string, AppointmentRecord[]>();
@@ -254,7 +327,10 @@ export function ConsultationCalendar({
   }, [firstDayOfMonth]);
 
   const monthName = useMemo(
-    () => firstDayOfMonth.toLocaleString('en-US', { month: 'long' }),
+    () => {
+      const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+      return monthNames[firstDayOfMonth.getMonth()];
+    },
     [firstDayOfMonth]
   );
 
@@ -335,6 +411,54 @@ export function ConsultationCalendar({
           <p style={subtitleStyle}>一目了然查看本月咨询安排</p>
         </div>
         <div style={monthGroupStyle}>
+          <div style={arrowButtonStyle}>
+            <div
+              onClick={handlePreviousMonth}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                const icon = e.currentTarget.querySelector('svg');
+                if (icon) {
+                  icon.style.color = '#FFFFFF';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                const icon = e.currentTarget.querySelector('svg');
+                if (icon) {
+                  icon.style.color = '#8E8E93';
+                }
+              }}
+              style={arrowButtonBaseStyle}
+            >
+              <ChevronLeft style={arrowIconStyle} />
+            </div>
+            <div
+              onClick={handleNextMonth}
+              onMouseEnter={(e) => {
+                if (!isCurrentMonth) {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  const icon = e.currentTarget.querySelector('svg');
+                  if (icon) {
+                    icon.style.color = '#FFFFFF';
+                  }
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                const icon = e.currentTarget.querySelector('svg');
+                if (icon && !isCurrentMonth) {
+                  icon.style.color = '#8E8E93';
+                }
+              }}
+              style={{
+                ...arrowButtonBaseStyle,
+                cursor: isCurrentMonth ? 'not-allowed' : 'pointer',
+                opacity: isCurrentMonth ? 0.3 : 1,
+              }}
+            >
+              <ChevronRight style={isCurrentMonth ? arrowIconDisabledStyle : arrowIconStyle} />
+            </div>
+          </div>
           <p style={monthNameStyle}>{monthName}</p>
           <p style={monthYearStyle}>{calendarYear}</p>
         </div>
