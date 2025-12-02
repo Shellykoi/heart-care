@@ -268,57 +268,6 @@ export function AppointmentBooking() {
     loadCounselors();
   }, [selectedSpecialties, selectedMethods, selectedGender, sortBy]);
 
-  // 加载Spline 3D组件
-  useEffect(() => {
-    // 检查脚本是否已加载，避免重复加载
-    const scriptId = 'spline-viewer-script';
-    const existingScript = document.getElementById(scriptId);
-    
-    if (existingScript) {
-      return; // 脚本已存在，不需要重复加载
-    }
-
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.type = 'module';
-    script.src = 'https://unpkg.com/@splinetool/viewer@1.12.0/build/spline-viewer.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    // 添加样式确保 spline-viewer 内容居中显示
-    const styleId = 'spline-viewer-center-style';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.textContent = `
-        spline-viewer {
-          display: block !important;
-          position: relative !important;
-        }
-        spline-viewer canvas {
-          object-fit: contain !important;
-          object-position: center center !important;
-          display: block !important;
-          margin: 0 auto !important;
-        }
-        spline-viewer > canvas,
-        spline-viewer > * {
-          object-fit: contain !important;
-          object-position: center center !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    return () => {
-      // 清理脚本（仅在组件卸载时）
-      const scriptToRemove = document.getElementById(scriptId);
-      if (scriptToRemove && document.body.contains(scriptToRemove)) {
-        document.body.removeChild(scriptToRemove);
-      }
-    };
-  }, []);
-
   const loadMyCounselors = async () => {
     try {
       const data = await appointmentApi.getMyCounselors();
@@ -668,29 +617,6 @@ export function AppointmentBooking() {
 
   return (
     <div className="space-y-6">
-      {/* 3D组件 - 在标题下方紧贴显示 */}
-      <div 
-        className="w-full rounded-lg overflow-hidden" 
-        style={{ 
-          height: '300px',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f5f5f5'
-        }}
-      >
-        {/* @ts-ignore - spline-viewer is a custom element */}
-        <spline-viewer 
-          url="https://prod.spline.design/HPbL1AL6VxxOyWZc/scene.splinecode"
-          style={{ 
-            width: '100%', 
-            height: '100%', 
-            display: 'block'
-          }}
-        />
-      </div>
-
       {/* 顶部筛选区 - 标签化选择 */}
       <Card className="sticky top-0 z-10 shadow-md">
         <CardHeader className="pb-2 pt-4">
