@@ -13,6 +13,7 @@ interface ConsultationCalendarProps {
   appointments?: AppointmentRecord[];
   loading?: boolean;
   title?: string;
+  onMonthChange?: (year: number, month: number) => void;
 }
 
 const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -249,10 +250,19 @@ export function ConsultationCalendar({
   appointments = [],
   loading = false,
   title = '我的咨询日程',
+  onMonthChange,
 }: ConsultationCalendarProps) {
   const today = useMemo(() => new Date(), []);
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  
+  // 初始化时通知父组件当前月份
+  React.useEffect(() => {
+    if (onMonthChange) {
+      onMonthChange(currentYear, currentMonth);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时执行一次
   
   const calendarYear = currentYear;
   const calendarMonth = currentMonth;
@@ -267,11 +277,19 @@ export function ConsultationCalendar({
   
   // 切换到上一个月
   const handlePreviousMonth = () => {
+    let newYear = currentYear;
+    let newMonth = currentMonth;
     if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
+      newMonth = 11;
+      newYear = currentYear - 1;
     } else {
-      setCurrentMonth(currentMonth - 1);
+      newMonth = currentMonth - 1;
+    }
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+    // 通知父组件月份变化
+    if (onMonthChange) {
+      onMonthChange(newYear, newMonth);
     }
   };
   
@@ -281,11 +299,19 @@ export function ConsultationCalendar({
       // 如果是当前月，不允许切换到下一个月
       return;
     }
+    let newYear = currentYear;
+    let newMonth = currentMonth;
     if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
+      newMonth = 0;
+      newYear = currentYear + 1;
     } else {
-      setCurrentMonth(currentMonth + 1);
+      newMonth = currentMonth + 1;
+    }
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+    // 通知父组件月份变化
+    if (onMonthChange) {
+      onMonthChange(newYear, newMonth);
     }
   };
 

@@ -83,8 +83,29 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
   const [consultationActivity, setConsultationActivity] = useState<any>(null);
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('month');
+  // 选中的月份（用于月视图时同步日历和统计数据）
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth());
 
-  const viewModeLabel = viewMode === 'day' ? '今日' : viewMode === 'week' ? '本周' : '本月';
+  // 获取月份名称
+  const getMonthName = (month: number) => {
+    const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+    return monthNames[month];
+  };
+  
+  // 判断选中的月份是否是当前月
+  const isSelectedCurrentMonth = useMemo(() => {
+    const now = new Date();
+    return selectedYear === now.getFullYear() && selectedMonth === now.getMonth();
+  }, [selectedYear, selectedMonth]);
+  
+  const viewModeLabel = viewMode === 'day' 
+    ? '今日' 
+    : viewMode === 'week' 
+      ? '本周' 
+      : isSelectedCurrentMonth 
+        ? '本月' 
+        : `${selectedYear}年${getMonthName(selectedMonth)}`;
   const trendRangeLabel = viewMode === 'day' ? '近7天' : viewMode === 'week' ? '近4周' : '近6月';
 
   // 计算不同视图下的数据
@@ -156,10 +177,10 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
       };
     }
     
-    // 月视图：本月数据
+    // 月视图：使用选中的月份数据
     if (viewMode === 'month') {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const monthStart = new Date(selectedYear, selectedMonth, 1);
+      const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
       
       const monthStats = consultationActivity.daily_stats?.filter((d: any) => {
         const date = new Date(d.date);
@@ -178,7 +199,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
         totalDuration: Math.round(monthDuration / 60), // 小时
         avgDuration: monthAvgDuration, // 分钟
         trendData: recent30Days.map((d: any) => ({ date: d.date, count: d.count })),
-        chartData: recent30Days.map((d: any) => ({
+        chartData: monthStats.map((d: any) => ({
           date: new Date(d.date).getDate() + '日',
           count: d.count,
           duration: d.total_duration || 0
@@ -189,7 +210,7 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
     }
     
     return null;
-  }, [consultationActivity, viewMode]);
+  }, [consultationActivity, viewMode, selectedYear, selectedMonth]);
 
   const trendSummaryText = useMemo(() => {
     if (!viewData || !Array.isArray(viewData.trendData) || viewData.trendData.length === 0) {
@@ -755,6 +776,10 @@ export function UserDashboard({ onLogout, userInfo }: UserDashboardProps) {
                         <ConsultationCalendar
                           appointments={allAppointments}
                           loading={loadingAppointments}
+                          onMonthChange={(year, month) => {
+                            setSelectedYear(year);
+                            setSelectedMonth(month);
+                          }}
                         />
                       </div>
                     </div>

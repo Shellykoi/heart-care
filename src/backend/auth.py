@@ -3,15 +3,21 @@
 包含密码哈希、JWT Token 生成和验证
 """
 
+import os
+import warnings
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 
 from database import get_db
 from models import User
+
+# 加载环境变量
+load_dotenv()
 
 # 直接使用 bcrypt，避免 passlib 的兼容性问题
 # passlib 在新版本 bcrypt 上存在兼容性问题（缺少 __about__ 属性等）
@@ -34,7 +40,13 @@ def get_default_counselor_password() -> str:
     return DEFAULT_COUNSELOR_PASSWORD
 
 # JWT 配置
-SECRET_KEY = "your-secret-key-change-this-in-production"  # 生产环境请更换
+# 从环境变量读取 SECRET_KEY，如果没有则使用默认值（仅用于开发环境）
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
+if SECRET_KEY == "your-secret-key-change-this-in-production":
+    warnings.warn(
+        "⚠️  警告：正在使用默认的 SECRET_KEY，这在生产环境中是不安全的！"
+        "请设置环境变量 SECRET_KEY 或在 .env 文件中配置。"
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24小时
 
