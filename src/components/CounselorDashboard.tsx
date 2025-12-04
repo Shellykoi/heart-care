@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -20,6 +20,17 @@ import IconForestHealing from '../assets/images/icon_森林疗愈.png';
 import IconArtHealing from '../assets/images/icon_艺术疗愈.png';
 import IconMeditationHealing from '../assets/images/icon_冥想疗愈.png';
 import IconTeaHealing from '../assets/images/icon_茶道疗愈.png';
+import IconHandmadeHealing from '../assets/images/icon_手作疗愈.png';
+import IconWaterHealing from '../assets/images/icon_水域疗愈.png';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from 'recharts';
 
 const getErrorMessage = (error: any, fallback: string) => {
   if (!error) {
@@ -353,15 +364,19 @@ function ConsultationRecordsTab() {
 
       setConsultationRecords(mergedRecords);
 
-      if (selectedRecord) {
-        const refreshed = mergedRecords.find((item) => item.key === selectedRecord.key);
-        if (refreshed) {
-          setSelectedRecord(refreshed);
-        } else {
-          setShowRecordDialog(false);
-          setSelectedRecord(null);
+      // 如果当前有选中的记录，更新它
+      setSelectedRecord((prevSelected) => {
+        if (prevSelected) {
+          const refreshed = mergedRecords.find((item) => item.key === prevSelected.key);
+          if (refreshed) {
+            return refreshed;
+          } else {
+            setShowRecordDialog(false);
+            return null;
+          }
         }
-      }
+        return prevSelected;
+      });
     } catch (error: any) {
       console.error('加载咨询记录失败:', error);
       toast.error(getErrorMessage(error, '加载咨询记录失败'));
@@ -369,7 +384,7 @@ function ConsultationRecordsTab() {
     } finally {
       setLoading(false);
     }
-  }, [selectedRecord]);
+  }, []);
 
   useEffect(() => {
     loadConsultationRecords();
@@ -654,6 +669,9 @@ export function CounselorDashboard({ onLogout, userInfo }: CounselorDashboardPro
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [counselorProfile, setCounselorProfile] = useState<any>(null);
+  const [consultationActivity, setConsultationActivity] = useState<any>(null);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('month');
   const [profileForm, setProfileForm] = useState({
     real_name: '',
     gender: '',
@@ -686,7 +704,15 @@ export function CounselorDashboard({ onLogout, userInfo }: CounselorDashboardPro
     loadAppointments();
     loadSchedules();
     loadProfile();
+    loadConsultationActivity();
   }, []);
+
+  // 当切换到数据统计标签页时，重新加载咨询活动数据
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      loadConsultationActivity();
+    }
+  }, [activeTab]);
 
   const loadProfile = async () => {
     try {
@@ -736,6 +762,95 @@ export function CounselorDashboard({ onLogout, userInfo }: CounselorDashboardPro
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadConsultationActivity = async () => {
+    try {
+      setLoadingActivity(true);
+      const data = await counselorApi.getConsultationActivity();
+      console.log('[CounselorDashboard] 咨询活动数据:', data);
+      setConsultationActivity(data);
+    } catch (error: any) {
+      console.error('获取咨询活动数据失败:', error);
+      toast.error(getErrorMessage(error, '获取咨询活动数据失败'));
+      setConsultationActivity(null);
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
+
+  // 处理图表数据
+  const chartData = useMemo(() => {
+    if (!consultationActivity) return [];
+
+    if (viewMode === 'day') {
+      // 日视图：显示24小时的咨询量
+      const hourStats = consultationActivity.hour_stats || [];
+      const hours = Array.from({ length: 24 }, (_, i) => i);
+      return hours.map(hour => {
+        const stat = hourStats.find((s: any) => s.hour === hour);
+        return {
+          label: `${hour}:00`,
+          count: stat?.count || 0,
+          duration: stat?.total_duration || 0
+        };
+      });
+    } else if (viewMode === 'week') {
+      // 周视图：显示最近7天的咨询量
+      const dailyStats = consultationActivity.daily_stats || [];
+      // 取最后7天的数据
+      const last7Days = dailyStats.slice(-7);
+      return last7Days.map((stat: any) => {
+        const dateObj = new Date(stat.date);
+        const label = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+        return {
+          label,
+          count: stat?.count || 0,
+          duration: stat?.total_duration || 0
+        };
+      });
+    } else {
+      // 月视图：显示最近30天的咨询量
+      const dailyStats = consultationActivity.daily_stats || [];
+      // 取最后30天的数据
+      const last30Days = dailyStats.slice(-30);
+      return last30Days.map((stat: any) => {
+        const dateObj = new Date(stat.date);
+        const label = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+        return {
+          label,
+          count: stat?.count || 0,
+          duration: stat?.total_duration || 0
+        };
+      });
+    }
+  }, [consultationActivity, viewMode]);
+
+  // 图表Tooltip组件
+  const ChartTooltipContent = ({ active, payload }: any) => {
+    if (!active || !payload || payload.length === 0) {
+      return null;
+    }
+
+    const dataPoint = payload[0]?.payload;
+    if (!dataPoint) return null;
+
+    const durationDisplay =
+      dataPoint.duration && dataPoint.duration > 0
+        ? `总时长 ${Math.round(dataPoint.duration)} 分钟`
+        : null;
+
+    return (
+      <div className="rounded-xl bg-white/95 backdrop-blur px-3 py-2 shadow-lg border border-[#E9E4DD]">
+        <p className="text-xs text-[#A19C92]">{dataPoint.label || '未知'}</p>
+        <p className="text-sm font-semibold text-[#1F1B18] mt-1">
+          {dataPoint.count} 次咨询
+        </p>
+        {durationDisplay && (
+          <p className="text-xs text-[#6B6B6B] mt-1">{durationDisplay}</p>
+        )}
+      </div>
+    );
   };
 
   const loadAppointments = async () => {
@@ -1387,30 +1502,133 @@ export function CounselorDashboard({ onLogout, userInfo }: CounselorDashboardPro
 
       {activeTab === 'stats' && (
         <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>工作统计</CardTitle>
-                <CardDescription>查看您的咨询数据和表现</CardDescription>
+            <Card className="bg-white border border-[#F1EFEA] rounded-[24px] shadow-sm">
+              <CardHeader className="px-8 pt-6 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-semibold text-[#1D1A18] flex items-center gap-2">
+                      <img src={IconMeditationHealing} alt="工作统计" className="w-6 h-6 object-contain" />
+                      工作统计
+                    </CardTitle>
+                    <CardDescription className="text-sm text-[#8C8579]">查看您的咨询数据和表现</CardDescription>
+                  </div>
+                  {/* 视图切换按钮 */}
+                  <div className="flex items-center gap-2 p-1 rounded-2xl bg-[#F1EFEA]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode('day')}
+                      className={`rounded-2xl px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'day' ? 'bg-[#F97316] text-white shadow-sm' : 'text-[#8C8579] hover:text-[#1D1A18]'}`}
+                    >
+                      <img src={IconSunHealing} alt="日视图" className="w-4 h-4 mr-1 object-contain" />
+                      日
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode('week')}
+                      className={`rounded-2xl px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'week' ? 'bg-[#F97316] text-white shadow-sm' : 'text-[#8C8579] hover:text-[#1D1A18]'}`}
+                    >
+                      <img src={IconForestHealing} alt="周视图" className="w-4 h-4 mr-1 object-contain" />
+                      周
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode('month')}
+                      className={`rounded-2xl px-3 py-1 text-xs font-medium transition-colors ${viewMode === 'month' ? 'bg-[#F97316] text-white shadow-sm' : 'text-[#8C8579] hover:text-[#1D1A18]'}`}
+                    >
+                      <img src={IconWaterHealing} alt="月视图" className="w-4 h-4 mr-1 object-contain" />
+                      月
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-8 pt-0 pb-6">
                 <div className="space-y-6">
                   <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="text-3xl text-blue-600">{stats.total_consultations || 0}</p>
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <p className="text-3xl text-blue-600 font-semibold">{stats.total_consultations || 0}</p>
                       <p className="text-sm text-gray-600 mt-1">总咨询次数</p>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <p className="text-3xl text-green-600">{stats.average_rating?.toFixed(1) || '0.0'}</p>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                      <p className="text-3xl text-green-600 font-semibold">{stats.average_rating?.toFixed(1) || '0.0'}</p>
                       <p className="text-sm text-gray-600 mt-1">平均评分</p>
                     </div>
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <p className="text-3xl text-purple-600">{stats.rating_percentage || 0}%</p>
+                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                      <p className="text-3xl text-purple-600 font-semibold">{stats.rating_percentage || 0}%</p>
                       <p className="text-sm text-gray-600 mt-1">好评率</p>
                     </div>
                   </div>
-                  <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <p className="text-gray-400">咨询量趋势图（使用Recharts实现）</p>
-                  </div>
+                  
+                  {/* 咨询量趋势图 */}
+                  <Card className="bg-white border border-[#F1EFEA] shadow-sm">
+                    <CardContent className="p-6 flex h-full flex-col">
+                      <div className="flex items-start justify-between mb-5">
+                        <div>
+                          <CardDescription className="text-sm text-[#6B6B6B] font-medium">
+                            {viewMode === 'day' ? '今日咨询热度' : viewMode === 'week' ? '本周咨询趋势' : '近月咨询趋势'}
+                          </CardDescription>
+                          <p className="text-xs text-[#A19C92] mt-1">
+                            {viewMode === 'day' ? '按小时查看今日咨询活跃度' : viewMode === 'week' ? '每日咨询次数与时长' : '按日展示最近咨询趋势'}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="rounded-lg border-[#E6E2DC] text-xs text-[#6B6B6B] bg-[#FFFAF3]">
+                          {viewMode === 'day' ? '日视图' : viewMode === 'week' ? '周视图' : '月视图'}
+                        </Badge>
+                      </div>
+                      <div className="mt-5 flex-1 min-h-[220px]">
+                        {loadingActivity ? (
+                          <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-[#A19C92] text-sm">
+                            <img src={IconMeditationHealing} alt="加载中" className="w-10 h-10 mb-3 animate-pulse opacity-80 object-contain" />
+                            加载中...
+                          </div>
+                        ) : consultationActivity && chartData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height={220}>
+                            <AreaChart
+                              data={chartData}
+                              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                            >
+                              <defs>
+                                <linearGradient id="colorConsultations" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#F97316" stopOpacity={0.35} />
+                                  <stop offset="95%" stopColor="#F97316" stopOpacity={0.05} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#F2EDE5" vertical={false} />
+                              <XAxis
+                                dataKey="label"
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{ fill: '#A19C92', fontSize: 12 }}
+                              />
+                              <YAxis
+                                tickLine={false}
+                                axisLine={false}
+                                allowDecimals={false}
+                                width={36}
+                                tick={{ fill: '#A19C92', fontSize: 12 }}
+                              />
+                              <Tooltip cursor={{ stroke: '#F97316', strokeOpacity: 0.15 }} content={<ChartTooltipContent />} />
+                              <Area
+                                type="monotone"
+                                dataKey="count"
+                                stroke="#F97316"
+                                strokeWidth={2}
+                                fill="url(#colorConsultations)"
+                                activeDot={{ r: 5 }}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-[#A19C92] text-sm">
+                            <img src={IconHandmadeHealing} alt="暂无图表数据" className="w-10 h-10 mb-3 opacity-80 object-contain" />
+                            暂无图表数据
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </CardContent>
             </Card>

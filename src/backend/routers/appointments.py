@@ -507,6 +507,149 @@ def get_my_counselors(
     return {"counselor_ids": [c.id for c in counselors]}
 
 
+@router.get("/consultation-records", response_model=List[ConsultationRecordResponse])
+def get_consultation_records(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    skip: Optional[Union[int, str]] = None,
+    limit: Optional[Union[int, str]] = None
+):
+    """
+    获取咨询记录列表
+    - 管理员：可以查看所有咨询记录
+    - 用户：只能查看自己的咨询记录
+    - 咨询师：只能查看自己的咨询记录
+    """
+    from sqlalchemy.orm import joinedload
+    
+    def _coerce_pagination_value(value: Optional[Union[int, str]], default: int, minimum: int = 0, maximum: int = 1000) -> int:
+        """将查询参数转换为合法的整数分页值，容错处理undefined、null等异常输入"""
+        if value is None:
+            coerced = default
+        elif isinstance(value, int):
+            coerced = value
+        else:
+            try:
+                coerced = int(value)
+            except (TypeError, ValueError):
+                coerced = default
+        if coerced < minimum:
+            coerced = minimum
+        if coerced > maximum:
+            coerced = maximum
+        return coerced
+    
+    skip_value = _coerce_pagination_value(skip, default=0, minimum=0)
+    limit_value = _coerce_pagination_value(limit, default=100, minimum=1, maximum=1000)
+    
+    # 检查用户角色
+    if current_user.role == "admin":
+        # 管理员可以查看所有咨询记录
+        records = db.query(ConsultationRecord).options(
+            joinedload(ConsultationRecord.user),
+            joinedload(ConsultationRecord.counselor)
+        ).order_by(ConsultationRecord.created_at.desc()).offset(skip_value).limit(limit_value).all()
+    elif current_user.role == "counselor":
+        # 咨询师只能查看自己的咨询记录
+        counselor = db.query(Counselor).filter(Counselor.user_id == current_user.id).first()
+        if not counselor:
+            raise HTTPException(status_code=404, detail="咨询师信息不存在")
+        records = db.query(ConsultationRecord).options(
+            joinedload(ConsultationRecord.user),
+            joinedload(ConsultationRecord.counselor)
+        ).filter(
+            ConsultationRecord.counselor_id == counselor.id
+        ).order_by(ConsultationRecord.created_at.desc()).offset(skip_value).limit(limit_value).all()
+    else:
+        # 普通用户只能查看自己的咨询记录
+        records = db.query(ConsultationRecord).options(
+            joinedload(ConsultationRecord.user),
+            joinedload(ConsultationRecord.counselor)
+        ).filter(
+            ConsultationRecord.user_id == current_user.id
+        ).order_by(ConsultationRecord.created_at.desc()).offset(skip_value).limit(limit_value).all()
+    
+    # 构建响应数据
+    result = []
+    for record in records:
+        record_dict = {
+            "id": record.id,
+            "appointment_id": record.appointment_id,
+            "user_id": record.user_id,
+            "counselor_id": record.counselor_id,
+            "consult_type": record.consult_type,
+            "consult_method": record.consult_method,
+            "appointment_date": record.appointment_date,
+            "description": record.description,
+            "summary": record.summary,
+            "rating": record.rating,
+            "review": record.review,
+            "user_confirmed_at": record.user_confirmed_at,
+            "counselor_confirmed_at": record.counselor_confirmed_at,
+            "created_at": record.created_at,
+            "updated_at": record.updated_at,
+            "user_name": record.user.nickname or record.user.username if record.user else None,
+            "user_nickname": record.user.nickname if record.user else None,
+            "counselor_name": record.counselor.real_name if record.counselor else None,
+            "user_username": record.user.username if record.user else None,
+            "user_phone": record.user.phone if record.user else None,
+            "user_email": record.user.email if record.user else None,
+            "user_student_id": record.user.student_id if record.user else None,
+        }
+        result.append(ConsultationRecordResponse(**record_dict))
+    
+    return result
+
+
+@router.get("/consultation-records/all", response_model=List[ConsultationRecordResponse])
+def get_all_consultation_records(
+    current_user: User = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 1000
+):
+    """
+    获取所有咨询记录（仅管理员）
+    """
+    from sqlalchemy.orm import joinedload
+    
+    records = db.query(ConsultationRecord).options(
+        joinedload(ConsultationRecord.user),
+        joinedload(ConsultationRecord.counselor)
+    ).order_by(ConsultationRecord.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # 构建响应数据
+    result = []
+    for record in records:
+        record_dict = {
+            "id": record.id,
+            "appointment_id": record.appointment_id,
+            "user_id": record.user_id,
+            "counselor_id": record.counselor_id,
+            "consult_type": record.consult_type,
+            "consult_method": record.consult_method,
+            "appointment_date": record.appointment_date,
+            "description": record.description,
+            "summary": record.summary,
+            "rating": record.rating,
+            "review": record.review,
+            "user_confirmed_at": record.user_confirmed_at,
+            "counselor_confirmed_at": record.counselor_confirmed_at,
+            "created_at": record.created_at,
+            "updated_at": record.updated_at,
+            "user_name": record.user.nickname or record.user.username if record.user else None,
+            "user_nickname": record.user.nickname if record.user else None,
+            "counselor_name": record.counselor.real_name if record.counselor else None,
+            "user_username": record.user.username if record.user else None,
+            "user_phone": record.user.phone if record.user else None,
+            "user_email": record.user.email if record.user else None,
+            "user_student_id": record.user.student_id if record.user else None,
+        }
+        result.append(ConsultationRecordResponse(**record_dict))
+    
+    return result
+
+
 @router.get("/{appointment_id}", response_model=AppointmentResponse)
 def get_appointment_detail(
     appointment_id: int,
@@ -844,146 +987,3 @@ def cancel_appointment(
     # 这样其他用户就可以预约该时段了
     
     return {"message": "预约已取消，时段已释放"}
-
-
-@router.get("/consultation-records", response_model=List[ConsultationRecordResponse])
-def get_consultation_records(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
-    skip: Optional[Union[int, str]] = None,
-    limit: Optional[Union[int, str]] = None
-):
-    """
-    获取咨询记录列表
-    - 管理员：可以查看所有咨询记录
-    - 用户：只能查看自己的咨询记录
-    - 咨询师：只能查看自己的咨询记录
-    """
-    from sqlalchemy.orm import joinedload
-    
-    def _coerce_pagination_value(value: Optional[Union[int, str]], default: int, minimum: int = 0, maximum: int = 1000) -> int:
-        """将查询参数转换为合法的整数分页值，容错处理undefined、null等异常输入"""
-        if value is None:
-            coerced = default
-        elif isinstance(value, int):
-            coerced = value
-        else:
-            try:
-                coerced = int(value)
-            except (TypeError, ValueError):
-                coerced = default
-        if coerced < minimum:
-            coerced = minimum
-        if coerced > maximum:
-            coerced = maximum
-        return coerced
-    
-    skip_value = _coerce_pagination_value(skip, default=0, minimum=0)
-    limit_value = _coerce_pagination_value(limit, default=100, minimum=1, maximum=1000)
-    
-    # 检查用户角色
-    if current_user.role == "admin":
-        # 管理员可以查看所有咨询记录
-        records = db.query(ConsultationRecord).options(
-            joinedload(ConsultationRecord.user),
-            joinedload(ConsultationRecord.counselor)
-        ).order_by(ConsultationRecord.created_at.desc()).offset(skip_value).limit(limit_value).all()
-    elif current_user.role == "counselor":
-        # 咨询师只能查看自己的咨询记录
-        counselor = db.query(Counselor).filter(Counselor.user_id == current_user.id).first()
-        if not counselor:
-            raise HTTPException(status_code=404, detail="咨询师信息不存在")
-        records = db.query(ConsultationRecord).options(
-            joinedload(ConsultationRecord.user),
-            joinedload(ConsultationRecord.counselor)
-        ).filter(
-            ConsultationRecord.counselor_id == counselor.id
-        ).order_by(ConsultationRecord.created_at.desc()).offset(skip_value).limit(limit_value).all()
-    else:
-        # 普通用户只能查看自己的咨询记录
-        records = db.query(ConsultationRecord).options(
-            joinedload(ConsultationRecord.user),
-            joinedload(ConsultationRecord.counselor)
-        ).filter(
-            ConsultationRecord.user_id == current_user.id
-        ).order_by(ConsultationRecord.created_at.desc()).offset(skip_value).limit(limit_value).all()
-    
-    # 构建响应数据
-    result = []
-    for record in records:
-        record_dict = {
-            "id": record.id,
-            "appointment_id": record.appointment_id,
-            "user_id": record.user_id,
-            "counselor_id": record.counselor_id,
-            "consult_type": record.consult_type,
-            "consult_method": record.consult_method,
-            "appointment_date": record.appointment_date,
-            "description": record.description,
-            "summary": record.summary,
-            "rating": record.rating,
-            "review": record.review,
-            "user_confirmed_at": record.user_confirmed_at,
-            "counselor_confirmed_at": record.counselor_confirmed_at,
-            "created_at": record.created_at,
-            "updated_at": record.updated_at,
-            "user_name": record.user.nickname or record.user.username if record.user else None,
-            "user_nickname": record.user.nickname if record.user else None,
-            "counselor_name": record.counselor.real_name if record.counselor else None,
-            "user_username": record.user.username if record.user else None,
-            "user_phone": record.user.phone if record.user else None,
-            "user_email": record.user.email if record.user else None,
-            "user_student_id": record.user.student_id if record.user else None,
-        }
-        result.append(ConsultationRecordResponse(**record_dict))
-    
-    return result
-
-
-@router.get("/consultation-records/all", response_model=List[ConsultationRecordResponse])
-def get_all_consultation_records(
-    current_user: User = Depends(require_role("admin")),
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 1000
-):
-    """
-    获取所有咨询记录（仅管理员）
-    """
-    from sqlalchemy.orm import joinedload
-    
-    records = db.query(ConsultationRecord).options(
-        joinedload(ConsultationRecord.user),
-        joinedload(ConsultationRecord.counselor)
-    ).order_by(ConsultationRecord.created_at.desc()).offset(skip).limit(limit).all()
-    
-    # 构建响应数据
-    result = []
-    for record in records:
-        record_dict = {
-            "id": record.id,
-            "appointment_id": record.appointment_id,
-            "user_id": record.user_id,
-            "counselor_id": record.counselor_id,
-            "consult_type": record.consult_type,
-            "consult_method": record.consult_method,
-            "appointment_date": record.appointment_date,
-            "description": record.description,
-            "summary": record.summary,
-            "rating": record.rating,
-            "review": record.review,
-            "user_confirmed_at": record.user_confirmed_at,
-            "counselor_confirmed_at": record.counselor_confirmed_at,
-            "created_at": record.created_at,
-            "updated_at": record.updated_at,
-            "user_name": record.user.nickname or record.user.username if record.user else None,
-            "user_nickname": record.user.nickname if record.user else None,
-            "counselor_name": record.counselor.real_name if record.counselor else None,
-            "user_username": record.user.username if record.user else None,
-            "user_phone": record.user.phone if record.user else None,
-            "user_email": record.user.email if record.user else None,
-            "user_student_id": record.user.student_id if record.user else None,
-        }
-        result.append(ConsultationRecordResponse(**record_dict))
-    
-    return result
